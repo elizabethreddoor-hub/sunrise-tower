@@ -18,7 +18,7 @@ build([{ floor_id: 'RF' }, { floor_id: '3F' }, { floor_id: '2F' }, { floor_id: '
 const DESK_X = [-10.5, -7.5, -4.5], DESK_Z = [-5.5, -2.2, 1.1], deskPos = k => [DESK_X[Math.floor(k / 3) % 3], DESK_Z[k % 3]];
 const RMAX = 12, PEOPLE = [], NP = 8, SKIN = [0x8A8A8A, 0x9A968F, 0x7B7F84, 0xA3A3A3, 0x8E8A84, 0x6F7378, 0x989C9F, 0x85817B];
 const PART = { torso: [B(.5, .62, .3), .95], head: [B(.36, .36, .36), 1.48], leg: [B(.2, .62, .22), .31], arm: [B(.15, .58, .17), .96] };
-const IM = {}; ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => { const p = PART[k.replace(/[LR]$/, '')]; const im = new THREE.InstancedMesh(p[0], new THREE.MeshStandardMaterial({ roughness: .9, flatShading: true }), NP + RMAX); im.castShadow = true; im.frustumCulled = false; IM[k] = im; scene.add(im); });
+const IM = {}; ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => { const p = PART[k.replace(/[LR]$/, '')]; const im = new THREE.InstancedMesh(p[0], new THREE.MeshStandardMaterial({ roughness: .9, flatShading: true }), NP); im.castShadow = true; im.frustumCulled = false; IM[k] = im; scene.add(im); });
 const AREA = { '1F': { x: [-12.5, 12.5], z: [-3.5, 8.5] }, up: { x: [-12, 12], z: [3, 8] } };
 const rnd = (a, b) => a + Math.random() * (b - a);
 const FL = ['1F', '1F', '1F', '1F', '1F', '2F', '2F', 'RF'];
@@ -28,21 +28,37 @@ for (let i = 0; i < NP; i++) { const p = { fid: FL[i], sc: 1.15, ph: Math.random
 const o3 = new THREE.Object3D(), pv = new THREE.Object3D(); o3.add(pv);
 function place(im, i, p, lx, ly, swing, part) { o3.position.set(p.x, p.y, p.z); o3.rotation.set(0, p.ry, 0); o3.scale.setScalar(p.sc); const h = PART[part][0].parameters.height;
   pv.position.set(lx, ly + h, 0); pv.rotation.set(swing, 0, 0); pv.updateMatrix(); o3.updateMatrix(); const m = new THREE.Matrix4().makeTranslation(0, -h / 2, 0); im.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(o3.matrix, pv.matrix).multiply(m)); }
-const ROSTER_FALLBACK = { residents: [
-  { id: 'mira', name: 'Mira', floor: 3, desk: 1, style: { top: '#1F4E85', bottom: '#F4F6F9' } },
-  { id: 'vera', name: 'Vera', floor: 3, desk: 2, style: { top: '#F08A24', bottom: '#1F4E85' } },
-  { id: 'stylist', name: '造型師', floor: 3, desk: 4, style: { top: '#6FA6DA', bottom: '#F4F6F9' } },
-  { id: 'contract', name: '合約管家', floor: 3, desk: 5, style: { top: '#F4F6F9', bottom: '#2F6FB3' } },
-  { id: 'fx', name: '外匯小精靈', floor: 3, desk: 7, style: { top: '#FFB15C', bottom: '#4A8FD0' } },
-  { id: 'nova', name: 'Nova', floor: 3, desk: 8, style: { top: '#2F6FB3', bottom: '#F08A24' } }] };
-const FLOOR_ID = { 1: '1F', 2: '2F', 3: '3F', 4: 'RF' }, RES = [], HEADC = new THREE.Color(0xF1D9C4);
+const ROSTER_FALLBACK = {"residents": [{"id": "mira", "name": "Mira", "floor": 3, "desk": 1, "skin": "mira"}, {"id": "vera", "name": "Vera", "floor": 3, "desk": 2, "skin": "vera"}, {"id": "stylist", "name": "造型師", "floor": 3, "desk": 4, "skin": "stylist"}, {"id": "contract", "name": "合約管家", "floor": 3, "desk": 5, "skin": "contract"}, {"id": "fx", "name": "外匯小精靈", "floor": 3, "desk": 7, "skin": "fx", "scale": 0.5}, {"id": "nova", "name": "Nova", "floor": 3, "desk": 8, "skin": "nova"}]};
+const FLOOR_ID = { 1: '1F', 2: '2F', 3: '3F', 4: 'RF' }, RES = [];
+const SKIN_UV = { head: [0, 0, 8, 8, 8], hat: [32, 0, 8, 8, 8], body: [16, 16, 8, 12, 4], jacket: [16, 32, 8, 12, 4], rarm: [40, 16, 4, 12, 4], rsleeve: [40, 32, 4, 12, 4],
+  larm: [32, 48, 4, 12, 4], lsleeve: [48, 48, 4, 12, 4], rleg: [0, 16, 4, 12, 4], rpants: [0, 32, 4, 12, 4], lleg: [16, 48, 4, 12, 4], lpants: [0, 48, 4, 12, 4] };
+function skinGeo(key, w, h, d, inf, px, oy) { const [u, v, W, H, D] = SKIN_UV[key], g = new THREE.BoxGeometry((w + inf * 2) * px, (h + inf * 2) * px, (d + inf * 2) * px);
+  const fr = { L: [u + D + W, v + D, D, H], R: [u, v + D, D, H], T: [u + D, v, W, D], D: [u + D + W, v, W, D], F: [u + D, v + D, W, H], B: [u + 2 * D + W, v + D, W, H] }, uv = g.attributes.uv;
+  ['L', 'R', 'T', 'D', 'F', 'B'].forEach((k, i) => { const [x, y, ww, hh] = fr[k], u0 = x / 64, u1 = (x + ww) / 64, v0 = 1 - y / 64, v1 = 1 - (y + hh) / 64;
+    [[u0, v0], [u1, v0], [u0, v1], [u1, v1]].forEach((q, j) => uv.setXY(i * 4 + j, q[0], q[1])); });
+  g.translate(0, oy * px, 0); return g; }
+function part(base, over, px, oy, w, h, d, ox) { const g = mergeGeometries([skinGeo(base, w, h, d, 0, px, oy), skinGeo(over, w, h, d, over === 'hat' ? .5 : .25, px, oy)], true); return g; }
+const SKTEX = {};
+function skinMats(id) { if (!SKTEX[id]) { const uri = SKINS[id]; if (!uri) return null; const tex = new THREE.TextureLoader().load(uri); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.colorSpace = THREE.SRGBColorSpace;
+    const base = new THREE.MeshLambertMaterial({ map: tex }), over = new THREE.MeshLambertMaterial({ map: tex, alphaTest: .5, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }); SKTEX[id] = [base, over]; }
+  return SKTEX[id]; }
+const BPX = 1.9 / 32; // full height 32 px = 1.9 m (same as the other people)
+function buildBlock(id, scale) { const M = skinMats(id); if (!M) return null; const px = BPX * scale, g = new THREE.Group(), mk = (geo, par, x, y) => { const m = new THREE.Mesh(geo, M); m.castShadow = true; const pv = new THREE.Group(); pv.position.set(x, y, 0); pv.add(m); par.add(pv); return pv; };
+  const r = {}; r.torso = mk(part('body', 'jacket', px, 6, 8, 12, 4), g, 0, 12 * px); r.head = mk(part('head', 'hat', px, 4, 8, 8, 8), g, 0, 24 * px);
+  r.legR = mk(part('rleg', 'rpants', px, -6, 4, 12, 4), g, -2 * px, 12 * px); r.legL = mk(part('lleg', 'lpants', px, -6, 4, 12, 4), g, 2 * px, 12 * px);
+  r.armR = mk(part('rarm', 'rsleeve', px, -4, 4, 12, 4), g, -6 * px, 22 * px); r.armL = mk(part('larm', 'lsleeve', px, -4, 4, 12, 4), g, 6 * px, 22 * px);
+  g.userData.rig = r; g.userData.px = px; scene.add(g); return g; }
 function setRoster(r) { const list = ((r && r.residents) || []).filter(a => a && a.name && FLOOR_ID[a.floor] && floorY[FLOOR_ID[a.floor]] !== undefined).slice(0, RMAX);
-  RES.forEach(p => p.tag.remove()); RES.length = 0;
-  list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], d = deskPos(+a.desk || 0), st = a.style || {}, top = new THREE.Color(st.top || '#2F6FB3'), bot = new THREE.Color(st.bottom || '#F4F6F9');
-    const p = { res: true, fid, sc: 1.15, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0 };
-    const tag = document.createElement('div'); tag.className = 'ntag'; tag.textContent = String(a.name).slice(0, 20); box.appendChild(tag); p.tag = tag; RES.push(p);
-    const i = NP + j; IM.torso.setColorAt(i, top); IM.armL.setColorAt(i, top); IM.armR.setColorAt(i, top); IM.legL.setColorAt(i, bot); IM.legR.setColorAt(i, bot); IM.head.setColorAt(i, HEADC); });
-  Object.values(IM).forEach(im => { im.count = NP + RES.length; if (im.instanceColor) im.instanceColor.needsUpdate = true; }); }
+  RES.forEach(p => { p.tag.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0;
+  list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], d = deskPos(+a.desk || 0), sc = +a.scale || 1;
+    const p = { res: true, fid, sc, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0 };
+    p.g = buildBlock(a.skin || a.id, sc);
+    const tag = document.createElement('div'); tag.className = 'ntag'; tag.textContent = String(a.name).slice(0, 20); box.appendChild(tag); p.tag = tag; RES.push(p); }); }
+function poseBlock(p, m, t) { const g = p.g, R = g.userData.rig, px = g.userData.px; let sw = 0; g.position.set(p.x, p.y, p.z); g.rotation.y = p.ry;
+  ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => R[k].rotation.set(0, 0, 0));
+  if (m === 'sit') { const ty = Math.sin(t * 9 + p.ph) * .12; g.position.y = p.y + .5 - 12 * px; R.legL.rotation.x = R.legR.rotation.x = -1.5; R.armL.rotation.x = -.9 + ty; R.armR.rotation.x = -.9 - ty; return; }
+  if (m === 'walk') sw = Math.sin(t * 7 + p.ph) * .5; else g.position.y = p.y + Math.sin(t * 1.6 + p.ph) * .01;
+  R.legL.rotation.x = sw; R.legR.rotation.x = -sw; R.armL.rotation.x = -sw * .8; R.armR.rotation.x = sw * .8; }
 function resStep(p, dt, t) { // seated at desk; now and then stand, stroll a little, come back
   if (p.seat) { p.sitT -= dt; p.ry = 0; if (p.sitT <= 0 && !SHOT) { p.seat = 0; p.to = [p.home[0] + rnd(-2.5, 2.5), p.home[1] + rnd(3, 5.5)]; p.back = false; } return 'sit'; }
   if (p.pause > 0) { p.pause -= dt; return 'idle'; }
@@ -51,11 +67,7 @@ function resStep(p, dt, t) { // seated at desk; now and then stand, stroll a lit
   if (p.back && Math.hypot(p.home[0] - p.x, p.home[1] + 1.2 - p.z) < .1) p.to = p.home.slice();
   const v = Math.min(d, .8 * dt); p.x += dx / d * v; p.z += dz / d * v; const ry = Math.atan2(dx, dz); p.ry += Math.atan2(Math.sin(ry - p.ry), Math.cos(ry - p.ry)) * Math.min(1, dt * 6); return 'walk'; }
 function people(dt, t) { PEOPLE.concat(RES).forEach((p, i) => { let sw = 0;
-  if (p.res) { const m = resStep(p, dt, t); const y0 = p.y; if (m === 'sit') { const ty = Math.sin(t * 9 + p.ph) * .12, oy = p.y; p.y = oy - .23;
-      place(IM.torso, i, p, 0, .64, 0, 'torso'); place(IM.head, i, p, 0, 1.3, 0, 'head'); place(IM.legL, i, p, -.13, .02, -1.5, 'leg'); place(IM.legR, i, p, .13, .02, -1.5, 'leg');
-      place(IM.armL, i, p, -.33, .66, -.9 + ty, 'arm'); place(IM.armR, i, p, .33, .66, -.9 - ty, 'arm'); p.y = oy; return; }
-    if (m === 'walk') sw = Math.sin(t * 7 + p.ph) * .5; }
-  else
+  if (p.res) { const m = resStep(p, dt, t); if (p.g) poseBlock(p, m, t); return; }
   if (p.pause > 0) p.pause -= dt; else { const dx = p.to[0] - p.x, dz = p.to[1] - p.z, d = Math.hypot(dx, dz);
     if (d < .1) { p.pause = rnd(2, 6); p.to = pick(p); } else { const v = Math.min(d, .9 * dt); p.x += dx / d * v; p.z += dz / d * v; const ry = Math.atan2(dx, dz); p.ry += Math.atan2(Math.sin(ry - p.ry), Math.cos(ry - p.ry)) * Math.min(1, dt * 6); sw = Math.sin(t * 7 + p.ph) * .5; } }
   const br = sw ? 0 : Math.sin(t * 1.6 + p.ph) * .01;
@@ -64,8 +76,8 @@ function people(dt, t) { PEOPLE.concat(RES).forEach((p, i) => { let sw = 0;
   place(IM.armL, i, p, -.33, .66 + br, -sw * .8, 'arm'); place(IM.armR, i, p, .33, .66 + br, sw * .8, 'arm'); });
   Object.values(IM).forEach(im => { im.instanceMatrix.needsUpdate = true; }); }
 const tv3 = new THREE.Vector3();
-function tags() { RES.forEach(p => { tv3.set(p.x, p.y + (p.seat ? 1.55 : 1.85) * p.sc, p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
-  const show = dist < 45 && tv3.z < 1; p.tag.style.display = show ? '' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; } }); }
+function tags() { RES.forEach(p => { tv3.set(p.x, p.y + (p.seat ? .5 + 1.3 * p.sc : 2.05 * p.sc), p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
+  const show = dist < 45 && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? '' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; } }); }
 
 const info = document.getElementById('info'); document.getElementById('ix').onclick = () => info.style.display = 'none';
 const ray = new THREE.Raycaster(), mv = new THREE.Vector2(); let down = null;
@@ -103,6 +115,7 @@ function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(),
   scene.fog = new THREE.Fog(0x1B3D66, 300, 900); }
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
+if (SHOT === 'close') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + .9, -2.6); camPos.set(-7.5, y + 3.4, 9.5); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'floor3') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + 1.1, -1.5); camPos.set(-6.8, y + 3.6, 15.5); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'lobby') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; target.set(0, y + 2.8, 0); camPos.set(1.5, y + 3.8, 26); camera.position.copy(camPos); controls.target.copy(target); }
 if (Q.get('az') !== null) { const az = +Q.get('az'), po = Math.min(1.55, +Q.get('pol')), d = +Q.get('dist'); tweenT = 1; controls.update(); const tg = controls.target.clone(); camera.position.set(tg.x + d * Math.sin(po) * Math.sin(az), tg.y + d * Math.cos(po), tg.z + d * Math.sin(po) * Math.cos(az)); camera.lookAt(tg); }

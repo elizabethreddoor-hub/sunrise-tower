@@ -1,11 +1,48 @@
 {
-  "version": 1,
-  "residents": [
-    { "id": "mira", "name": "Mira", "floor": 3, "desk": 1, "style": { "top": "#1F4E85", "bottom": "#F4F6F9" } },
-    { "id": "vera", "name": "Vera", "floor": 3, "desk": 2, "style": { "top": "#F08A24", "bottom": "#1F4E85" } },
-    { "id": "stylist", "name": "造型師", "floor": 3, "desk": 4, "style": { "top": "#6FA6DA", "bottom": "#F4F6F9" } },
-    { "id": "contract", "name": "合約管家", "floor": 3, "desk": 5, "style": { "top": "#F4F6F9", "bottom": "#2F6FB3" } },
-    { "id": "fx", "name": "外匯小精靈", "floor": 3, "desk": 7, "style": { "top": "#FFB15C", "bottom": "#4A8FD0" } },
-    { "id": "nova", "name": "Nova", "floor": 3, "desk": 8, "style": { "top": "#2F6FB3", "bottom": "#F08A24" } }
-  ]
+ "version": 2,
+ "residents": [
+  {
+   "id": "mira",
+   "name": "Mira",
+   "floor": 3,
+   "desk": 1,
+   "skin": "mira"
+  },
+  {
+   "id": "vera",
+   "name": "Vera",
+   "floor": 3,
+   "desk": 2,
+   "skin": "vera"
+  },
+  {
+   "id": "stylist",
+   "name": "造型師",
+   "floor": 3,
+   "desk": 4,
+   "skin": "stylist"
+  },
+  {
+   "id": "contract",
+   "name": "合約管家",
+   "floor": 3,
+   "desk": 5,
+   "skin": "contract"
+  },
+  {
+   "id": "fx",
+   "name": "外匯小精靈",
+   "floor": 3,
+   "desk": 7,
+   "skin": "fx",
+   "scale": 0.5
+  },
+  {
+   "id": "nova",
+   "name": "Nova",
+   "floor": 3,
+   "desk": 8,
+   "skin": "nova"
+  }
+ ]
 }
