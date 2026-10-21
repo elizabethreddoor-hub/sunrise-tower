@@ -43,27 +43,47 @@ function skinMats(id) { if (!SKTEX[id]) { const uri = SKINS[id]; if (!uri) retur
     const base = new THREE.MeshLambertMaterial({ map: tex }), over = new THREE.MeshLambertMaterial({ map: tex, alphaTest: .5, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }); SKTEX[id] = [base, over]; }
   return SKTEX[id]; }
 const BPX = 1.9 / 32; // full height 32 px = 1.9 m (same as the other people)
-function buildBlock(id, scale) { const M = skinMats(id); if (!M) return null; const px = BPX * scale, g = new THREE.Group(), mk = (geo, par, x, y) => { const m = new THREE.Mesh(geo, M); m.castShadow = true; const pv = new THREE.Group(); pv.position.set(x, y, 0); pv.add(m); par.add(pv); return pv; };
+function buildBlock(id, scale) { const M0 = skinMats(id); if (!M0) return null; const M = M0.map(m => m.clone()); const px = BPX * scale, g = new THREE.Group(), mk = (geo, par, x, y) => { const m = new THREE.Mesh(geo, M); m.castShadow = true; const pv = new THREE.Group(); pv.position.set(x, y, 0); pv.add(m); par.add(pv); return pv; };
   const r = {}; r.torso = mk(part('body', 'jacket', px, 6, 8, 12, 4), g, 0, 12 * px); r.head = mk(part('head', 'hat', px, 4, 8, 8, 8), g, 0, 24 * px);
   r.legR = mk(part('rleg', 'rpants', px, -6, 4, 12, 4), g, -2 * px, 12 * px); r.legL = mk(part('lleg', 'lpants', px, -6, 4, 12, 4), g, 2 * px, 12 * px);
   r.armR = mk(part('rarm', 'rsleeve', px, -4, 4, 12, 4), g, -6 * px, 22 * px); r.armL = mk(part('larm', 'lsleeve', px, -4, 4, 12, 4), g, 6 * px, 22 * px);
-  g.userData.rig = r; g.userData.px = px; scene.add(g); return g; }
+  g.userData.rig = r; g.userData.M = M; g.userData.px = px; scene.add(g); return g; }
 function setRoster(r) { const list = ((r && r.residents) || []).filter(a => a && a.name && FLOOR_ID[a.floor] && floorY[FLOOR_ID[a.floor]] !== undefined).slice(0, RMAX);
-  RES.forEach(p => { p.tag.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0;
+  RES.forEach(p => { p.tag.remove(); if (p.bub) p.bub.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0;
   list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], d = deskPos(+a.desk || 0), sc = +a.scale || 1;
-    const p = { res: true, fid, sc, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0 };
+    const p = { res: true, id: String(a.id || a.skin || ''), want: null, dim: 0, fid, sc, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0 };
     p.g = buildBlock(a.skin || a.id, sc);
-    const tag = document.createElement('div'); tag.className = 'ntag'; tag.textContent = String(a.name).slice(0, 20); box.appendChild(tag); p.tag = tag; RES.push(p); }); }
+    const tag = document.createElement('div'); tag.className = 'ntag'; tag.textContent = String(a.name).slice(0, 20); box.appendChild(tag); p.tag = tag;
+    const bub = document.createElement('div'); bub.className = 'bub'; box.appendChild(bub); p.bub = bub; RES.push(p); });
+  RES.forEach(p => { p.bubT = ''; }); if (LAST_ST) applyStatus(LAST_ST); }
 function poseBlock(p, m, t) { const g = p.g, R = g.userData.rig, px = g.userData.px; let sw = 0; g.position.set(p.x, p.y, p.z); g.rotation.y = p.ry;
   ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => R[k].rotation.set(0, 0, 0));
   if (m === 'sit') { const ty = Math.sin(t * 9 + p.ph) * .12; g.position.y = p.y + .5 - 12 * px; R.legL.rotation.x = R.legR.rotation.x = -1.5; R.armL.rotation.x = -.9 + ty; R.armR.rotation.x = -.9 - ty; return; }
   if (m === 'walk') sw = Math.sin(t * 7 + p.ph) * .5; else g.position.y = p.y + Math.sin(t * 1.6 + p.ph) * .01;
   R.legL.rotation.x = sw; R.legR.rotation.x = -sw; R.armL.rotation.x = -sw * .8; R.armR.rotation.x = sw * .8; }
-function resStep(p, dt, t) { // seated at desk; now and then stand, stroll a little, come back
+// live status: want = 'work' (seated), 'idle' (stands and strolls), 'away' (seated, dimmed). null = no status data -> default rhythm.
+// A change never jumps: walkers finish their walk back to the desk; sitters stand up only after the current arm swing ends.
+let LAST_ST = null;
+function applyStatus(list) { LAST_ST = list; const by = {}; (list || []).forEach(r => { by[String(r.id).replace(/^home_/, '')] = r; });
+  RES.forEach(p => { const r = by[p.id]; if (!r) return; const live = r.fresh === 'live';
+    p.want = !live ? 'away' : (r.state === 'work' ? 'work' : 'idle');
+    p.bubT = live && r.activity ? String(r.activity).slice(0, 18) : '';
+    if (SHOT) { p.dim = p.want === 'away' ? 1 : 0; if (p.want === 'idle') { p.seat = 0; p.pause = 0; p.back = false; p.x = p.home[0] + 1.2; p.z = p.home[1] + 2.4; p.to = [p.x + .01, p.z]; p.ry = .6; } else { p.seat = 1; p.x = p.home[0]; p.z = p.home[1]; } dimSync(p); } });
+  if (SHOT) people(0, 0); }
+window.P7_applyStatus = applyStatus;
+function dimSync(p) { const ms = p.g && p.g.userData.M; if (!ms) return; const k = 1 - .68 * p.dim;
+  ms.forEach(m => { m.color.setRGB(k, k, k * 1.08); }); }
+function resStep(p, dt, t) {
+  if (p.want) { const tgt = p.want === 'away' ? 1 : 0; if (Math.abs(p.dim - tgt) > .001) { p.dim += Math.sign(tgt - p.dim) * Math.min(Math.abs(tgt - p.dim), dt / 1.5); dimSync(p); } }
+  if (p.want === 'idle' && p.seat) { const ph = (t * 9 + p.ph) % (Math.PI * 2); p.sitT = ph < .25 ? 0 : 1; }
+  if (p.want && p.want !== 'idle' && p.seat) p.sitT = 99;
+  if (p.want && p.want !== 'idle' && !p.seat && !p.back && p.pause <= 0) { p.back = true; p.to = [p.home[0], p.home[1] + 1.2]; }
+  if (p.want === 'idle' && !p.seat && p.back && p.pause <= 0 && Math.hypot(p.home[0] - p.x, p.home[1] + 1.2 - p.z) < .1) { p.back = false; p.pause = rnd(2, 5); p.to = [p.home[0] + rnd(-2.5, 2.5), p.home[1] + rnd(3, 5.5)]; return 'idle'; }
+ // seated at desk; now and then stand, stroll a little, come back
   if (p.seat) { p.sitT -= dt; p.ry = 0; if (p.sitT <= 0 && !SHOT) { p.seat = 0; p.to = [p.home[0] + rnd(-2.5, 2.5), p.home[1] + rnd(3, 5.5)]; p.back = false; } return 'sit'; }
   if (p.pause > 0) { p.pause -= dt; return 'idle'; }
   const dx = p.to[0] - p.x, dz = p.to[1] - p.z, d = Math.hypot(dx, dz);
-  if (d < .08) { if (p.back) { p.x = p.home[0]; p.z = p.home[1]; p.seat = 1; p.sitT = rnd(20, 45); return 'sit'; } p.back = true; p.pause = rnd(2, 4); p.to = [p.home[0], p.home[1] + 1.2]; return 'idle'; }
+  if (d < .08) { if (p.want === 'idle' && !p.back) { p.pause = rnd(2, 5); p.to = [p.home[0] + rnd(-2.5, 2.5), p.home[1] + rnd(3, 5.5)]; if (Math.random() < .3) { p.back = true; p.to = [p.home[0], p.home[1] + 1.2]; } return 'idle'; } if (p.back) { p.x = p.home[0]; p.z = p.home[1]; p.seat = 1; p.sitT = rnd(20, 45); return 'sit'; } p.back = true; p.pause = rnd(2, 4); p.to = [p.home[0], p.home[1] + 1.2]; return 'idle'; }
   if (p.back && Math.hypot(p.home[0] - p.x, p.home[1] + 1.2 - p.z) < .1) p.to = p.home.slice();
   const v = Math.min(d, .8 * dt); p.x += dx / d * v; p.z += dz / d * v; const ry = Math.atan2(dx, dz); p.ry += Math.atan2(Math.sin(ry - p.ry), Math.cos(ry - p.ry)) * Math.min(1, dt * 6); return 'walk'; }
 function people(dt, t) { PEOPLE.concat(RES).forEach((p, i) => { let sw = 0;
@@ -78,7 +98,8 @@ function people(dt, t) { PEOPLE.concat(RES).forEach((p, i) => { let sw = 0;
 const tv3 = new THREE.Vector3(); let LYSYNC = null;
 function focusFid() { let best = null, by = -1e9; Object.keys(floorY).forEach(f => { const y = floorY[f]; if (y <= controls.target.y + .3 && y > by) { by = y; best = f; } }); return best; }
 function tags() { if (LYSYNC) LYSYNC(); const ff = focusFid(); RES.forEach(p => { tv3.set(p.x, p.y + (p.seat ? .5 + 1.3 * p.sc : 2.05 * p.sc), p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
-  const show = dist < 45 && p.fid === ff && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? '' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; } }); }
+  const show = dist < 45 && p.fid === ff && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? '' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; }
+  p.tag.style.opacity = p.dim > .5 ? .55 : 1; const sb = show && p.bubT; p.bub.style.display = sb ? '' : 'none'; if (sb) { if (p.bub.textContent !== p.bubT) p.bub.textContent = p.bubT; p.bub.style.left = p.tag.style.left; p.bub.style.top = (parseFloat(p.tag.style.top) - 24) + 'px'; } }); }
 
 const info = document.getElementById('info'); document.getElementById('ix').onclick = () => info.style.display = 'none';
 const ray = new THREE.Raycaster(), mv = new THREE.Vector2(); let down = null;
