@@ -26,7 +26,7 @@ function buildExtras(fid, y, g, m) {
 '''
 import base64
 SK={k:'data:image/png;base64,'+base64.b64encode(open('/workspace/p007/skins/%s.png'%k,'rb').read()).decode() for k in ['mira','nova','vera','contract','stylist','fx']}
-tail='const SKINS = '+__import__('json').dumps(SK)+';\n'+open('/workspace/p007/tools/tail.js',encoding='utf-8').read()
+tail='const SKINS = '+__import__('json').dumps(SK)+';\n'+open('/workspace/p007/tools/tail.js',encoding='utf-8').read().replace('setRoster(ROSTER_FALLBACK);', open('/workspace/p007/tools/tail_4f.js',encoding='utf-8').read()+'\nsetRoster(ROSTER_FALLBACK);',1)
 html='''<!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>日上昇大樓</title>
