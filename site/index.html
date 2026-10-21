@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>日上昇大樓</title>
+<style>html,body{margin:0;height:100%;background:#0b0a24;overflow:hidden;font-family:-apple-system,"Noto Sans TC",sans-serif}
+#three{position:absolute;inset:0}#three canvas{display:block;width:100%;height:100%}
+#hint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);color:#d8cfc4;font-size:12px;background:rgba(20,18,20,.6);padding:4px 12px;border-radius:12px;pointer-events:none}
+#info{position:absolute;right:16px;top:16px;width:min(340px,calc(100% - 32px));background:rgba(22,18,22,.94);border:1px solid #B48C4C;border-radius:12px;color:#f3ece4;display:none;z-index:5}
+#info h2{margin:0;padding:12px 16px;font-size:17px;color:#E9C77B;border-bottom:1px solid rgba(180,140,76,.5);display:flex;justify-content:space-between}
+#info button{background:none;border:0;color:#d8cfc4;font-size:18px;cursor:pointer}#info .b{padding:12px 16px;font-size:14px;line-height:1.7}
+#info .ex{display:inline-block;font-size:12px;color:#1c1a1c;background:#E9C77B;border-radius:6px;padding:1px 8px;margin-bottom:8px}
+body.nogl #hint{display:none}</style></head><body>
+<div id="three"></div><div id="hint">拖曳可微轉、滾輪縮放；點大樓看公司服務資訊</div>
+<div id="info" role="dialog"><h2>公司服務資訊<button id="ix" aria-label="關閉">×</button></h2><div class="b">
+<span class="ex">範例文字・待填入</span>
+<p>【範例】這裡放公司簡介，一到兩句話說明我們是誰、做什麼。</p>
+<p>【範例】服務項目一／服務項目二／服務項目三</p>
+<p>【範例】聯絡方式：待填入</p></div></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+const box = document.getElementById('three');
+const Q = new URLSearchParams(location.search), SHOT = Q.get('shot') || '';
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: !!SHOT }); }
+catch (e) { document.body.classList.add('nogl'); throw e; }
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+box.appendChild(renderer.domElement);
+const C = { ink: 0x231815, gold: 0xB48C4C, brand: 0x76161B, rose: 0xB76E79, glass: 0x9fb6d8 };
+const scene = new THREE.Scene();
+
+(function () { const c = document.createElement('canvas'); c.width = 4; c.height = 256; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#0b0a24'); gr.addColorStop(.55, '#241a4a'); gr.addColorStop(1, '#3b2456');
+  g.fillStyle = gr; g.fillRect(0, 0, 4, 256); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; scene.background = t; })();
+const camera = new THREE.PerspectiveCamera(24, 1, 0.5, 400);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minAzimuthAngle = -0.38; controls.maxAzimuthAngle = 0.38; controls.minPolarAngle = 1.2; controls.maxPolarAngle = 1.68;
+controls.minDistance = 10; controls.maxDistance = 140;
+const composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.35, 0.4, 0.97); composer.addPass(bloom); composer.addPass(new OutputPass());
+
+const M = {}; const mat = (hex, o) => new THREE.MeshStandardMaterial(Object.assign({ color: hex, roughness: 0.92, metalness: 0, flatShading: true }, o || {}));
+function mesh(g, m, x, y, z, parent, cast) { const o = new THREE.Mesh(g, m); o.position.set(x || 0, y || 0, z || 0); o.castShadow = cast !== false; o.receiveShadow = true; (parent || scene).add(o); return o; }
+const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+
+
+const nm = (name, hex, o) => { const m = mat(hex, Object.assign({ roughness: .85 }, o || {})); m.name = name; return m; };
+const GOLD = { metalness: .3, roughness: .8 }, LAMP = (hex) => ({ emissive: hex, emissiveIntensity: .5 });
+const SH = { main: nm('SHELL_main', 0x141012), trim: nm('SHELL_trim', 0xB48C4C, GOLD), cut: nm('SLAB_cut', 0x3A3236) };
+const FM = {
+  RF: { wall: nm('F4_wall', 0x1E1A1C), floor: nm('F4_floor', 0x2A2224), main: nm('F4_main', 0x1E1A1C), trim: nm('F4_trim', 0xB48C4C, GOLD), accent: nm('F4_accent', 0x4A1418), light: nm('F4_light', 0xE8DCC8, LAMP(0xE8DCC8)) },
+  '3F': { wall: nm('F3_wall', 0x241C1E), floor: nm('F3_floor', 0x2E2426), main: nm('F3_main', 0x5A2230), trim: nm('F3_trim', 0xC99A8A, GOLD), accent: nm('F3_accent', 0xEDE3DC), light: nm('F3_light', 0xC99A8A, LAMP(0xC99A8A)) },
+  '2F': { wall: nm('F2_wall', 0x1F2326), floor: nm('F2_floor', 0x2B3034), main: nm('F2_main', 0x2A8C9E), accent: nm('F2_accent', 0x3FAE6A), trim: nm('F2_trim', 0xB48C4C, GOLD), light: nm('F2_light', 0x2A8C9E) },
+  '1F': { wall: nm('F1_wall', 0x4A3C36), floor: nm('F1_floor', 0xCDBFA8), trim: nm('F1_trim', 0xD8B36A, GOLD), main: nm('F1_main', 0x262320), accent: nm('F1_accent', 0x547A5C), light: nm('F1_light', 0xFFF4E0, LAMP(0xFFF4E0)) } 
+};
+const STYLE = {
+  RF: { light: 0xFFC98A, fill: 0xC8503C, fillK: .25, label: '4F' }, '3F': { light: 0xFFD4C2, fill: 0xB0444C, fillK: .2, label: '3F' },
+  '2F': { light: 0xF4F1EA, fill: 0xE8E4DA, fillK: .2, label: '2F' }, '1F': { light: 0xFFE6C4, fill: 0xC9A45C, fillK: .2, label: '1F' }
+};
+const W = 18, D = 12, FH = 3.6, T = 0.18, BZ = -D / 2 + .2; const W1 = 30, D1 = 20, FH1 = 5.4; 
+const world = new THREE.Group(); scene.add(world);
+const floorPick = [], floorY = {}, furnGroups = {};
+let built = '', topFloorY = null; const LOCKED = {}; 
+const FROST = new THREE.MeshBasicMaterial({ color: 0xd9dde6, transparent: true, opacity: .94, name: 'frost_shell' });
+const cyl = (rt, rb, h, s) => new THREE.CylinderGeometry(rt, rb, h, s);
+
+function crown(m, g) { mesh(cyl(.5, .5, .04, 8), m.light, 0, 0, -.06, g).rotation.x = Math.PI / 2; 
+  mesh(cyl(.32, .32, .2, 8), m.trim, 0, -.05, .12, g);
+  for (let i = 0; i < 5; i++) { const x = -.26 + i * .13; mesh(new THREE.ConeGeometry(.06, .2, 4), m.trim, x, .15, .12, g); mesh(new THREE.IcosahedronGeometry(.03, 0), m.trim, x, .27, .12, g); }
+  mesh(new THREE.OctahedronGeometry(.06), m.accent, 0, -.05, .45, g); }
+function perfume(m, g, s) { mesh(cyl(.16 * s, .16 * s, .34 * s, 8), m.main, 0, .17 * s, 0, g); mesh(cyl(.04 * s, .05 * s, .08 * s, 6), m.trim, 0, .38 * s, 0, g); mesh(new THREE.OctahedronGeometry(.07 * s), m.trim, 0, .48 * s, 0, g); }
+function gear(m, g) { const d = mesh(cyl(.4, .4, .1, 16), m.main, 0, 0, 0, g); d.rotation.x = Math.PI / 2;
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const t = mesh(B(.14, .14, .1), m.main, Math.cos(a) * .45, Math.sin(a) * .45, 0, g); t.rotation.z = a; }
+  const ax = mesh(cyl(.08, .08, .16, 8), m.trim, 0, 0, 0, g); ax.rotation.x = Math.PI / 2; }
+function shield(m, g) { const shp = (k) => { const s = new THREE.Shape(); [[0, .5], [.38, .5], [.38, .05], [.2, -.3], [0, -.5], [-.2, -.3], [-.38, .05], [-.38, .5]].forEach((p, i) => i ? s.lineTo(p[0] * k, p[1] * k) : s.moveTo(p[0] * k, p[1] * k)); return s; };
+  mesh(new THREE.ExtrudeGeometry(shp(1), { depth: .08, bevelEnabled: false }), m.trim, 0, 0, 0, g);
+  mesh(new THREE.ExtrudeGeometry(shp(.62), { depth: .04, bevelEnabled: false }), m.main, 0, 0, .08, g);
+  mesh(new THREE.IcosahedronGeometry(.07, 0), m.trim, 0, 0, .14, g); }
+
+const RED3 = nm('F3_redwall', 0x5A2230, { roughness: 1 });
+const STRIP2 = nm('F2_strip', 0x2A8C9E, { roughness: 1, emissive: 0x000000 });
+function furnish(fid, y, g) {
+  const m = FM[fid], X = (x) => x * 2, Z = (z) => z < BZ + 1 ? z : z * 2, put = (geo, mm, x, yy, z) => mesh(geo, mm, X(x), y + yy, Z(z), g);
+  if (fid === 'RF') {
+    put(B(2.4, .1, 1), m.main, 1.8, .78, -1.7); put(B(2.44, .03, 1.04), m.trim, 1.8, .84, -1.7); [-1, 1].forEach(s => put(B(.1, .74, .9), m.main, 1.8 + s * 1.1, .37, -1.7)); 
+    put(B(.6, .12, .6), m.accent, 1.8, .48, -2.35); const bk = put(B(.6, .9, .1), m.accent, 1.8, .95, -2.62); bk.rotation.x = -.12;  
+    put(B(2.2, 2.3, .4), m.main, -3.0, 1.15, BZ + .2); [.5, 1.2, 1.9].forEach(h => put(B(2.1, .05, .36), m.trim, -3.0, h, BZ + .24)); 
+    put(new THREE.SphereGeometry(.28, 8, 6), m.trim, 3.6, 1.15, -.9); put(cyl(.12, .16, .9, 8), m.main, 3.6, .45, -.9); 
+    put(cyl(.025, .025, 1.6, 6), m.trim, 3.6, .8, 1.2); put(new THREE.ConeGeometry(.25, .3, 8, 1, true), m.light, 3.6, 1.7, 1.2);    
+    put(B(2.4, .02, 1.6), m.accent, -.6, .01, .4);   
+    const ic = new THREE.Group(); crown(m, ic); ic.position.set(X(1.8), y + 2.1, BZ + .05); g.add(ic);
+  } else if (fid === '3F') {
+    put(B(1.6, 2, .5), m.wall, -2.6, 1, BZ + .25); [.5, 1.05, 1.6].forEach(h => put(B(1.5, .05, .44), m.trim, -2.6, h, BZ + .3)); 
+    const big = new THREE.Group(); perfume(m, big, 1.4); big.position.set(X(-2.6), y + 1.08, BZ + .3); g.add(big);
+    put(cyl(.75, .75, .06, 12), m.accent, 1.2, .74, -.6); put(cyl(.08, .12, .7, 8), m.accent, 1.2, .36, -.6); 
+    [[-.5, .2], [.45, .25]].forEach(p => { const s = new THREE.Group(); perfume(m, s, .6); s.position.set(X(1.2) + p[0], y + .77, Z(-.6) + p[1] - .2); g.add(s); });
+    [[.1, .6], [2.3, .2]].forEach(p => put(cyl(.25, .25, .45, 10), m.main, p[0], .225, p[1])); 
+    put(B(1.4, 1, .05), m.wall, 2.6, 1.6, BZ + .05); [[2.2, m.main], [2.6, m.trim], [3.0, m.accent]].forEach(c => put(B(.3, .3, .03), c[1], c[0], 1.6, BZ + .1)); 
+    put(new THREE.SphereGeometry(.22, 8, 6), m.light, 1.2, 2.45, -.6); put(cyl(.01, .01, .55, 4), m.trim, 1.2, 2.82, -.6); 
+  } else if (fid === '2F') {
+    put(B(W - .6, .012, .28), STRIP2, 0, .006, .9);  
+    put(B(.08, .9, 2.4), m.wall, 0, .45, -1.4);   
+    put(B(1.8, .08, .8), m.wall, -2.6, .76, -1.5); put(B(1.84, .03, .84), m.main, -2.6, .81, -1.5); [-1, 1].forEach(s => put(B(.08, .72, .7), m.wall, -2.6 + s * .8, .36, -1.5)); 
+    const bp = put(B(.9, .05, .65), m.main, -3.5, 1.0, -.4); bp.rotation.x = -.9;  
+    [[-2.6, -.7], [2.6, -.7]].forEach(p => { put(B(.5, .08, .5), m.wall, p[0], .48, p[1]); put(B(.5, .55, .08), m.wall, p[0], .8, p[1] + .25); put(cyl(.04, .04, .44, 6), m.wall, p[0], .22, p[1]); }); 
+    put(B(1.8, .08, .8), m.wall, 2.6, .76, -1.5); [-1, 1].forEach(s => put(B(.08, .72, .7), m.wall, 2.6 + s * .8, .36, -1.5));
+    [1.6, 2.6, 3.6].forEach((x, k) => { put(B(.9, .6, .06), m.wall, x, 1.75, BZ + .05); 
+      [[-.3, .3, 1], [-.1, .4, 0], [.1, .25, 1], [.3, .35, k % 2]].forEach(c => { const mm = c[2] ? m.accent : m.trim; put(B(.07, c[1], .03), mm, x + c[0], 1.75, BZ + .1); put(B(.015, c[1] + .14, .02), mm, x + c[0], 1.75, BZ + .1); }); });
+    put(B(.7, 2.1, .6), m.wall, -1.2, 1.05, BZ + .3); [.6, 1.1, 1.6].forEach(h => put(B(.6, .04, .02), m.light, -1.2, h, BZ + .61)); 
+    put(B(1.8, .08, .8), m.wall, -1.6, .76, -1.5); [-1, 1].forEach(s => put(B(.08, .72, .7), m.wall, -1.6 + s * .8, .36, -1.5)); put(cyl(.25, .2, .5, 8), m.wall, 4.1, .25, 1.2); put(new THREE.IcosahedronGeometry(.4, 0), m.accent, 4.1, .85, 1.2); 
+    const ic = new THREE.Group(); gear(m, ic); ic.position.set(X(-4.4), y + 2.1, BZ + .1); g.add(ic);
+  } else if (fid === '1F') {
+    put(B(3, .02, 1.4), m.main, -3.0, .01, 2.1);   
+    put(B(3, 1, .7), m.wall, .6, .5, -1.4); put(B(3.02, .14, .72), m.trim, .6, .62, -1.4); 
+    put(B(2, .4, .8), m.main, 2.9, .2, .5); put(B(2, .5, .2), m.main, 2.9, .55, .15); [-1, 1].forEach(s => put(B(.2, .55, .8), m.main, 2.9 + s * 1.05, .28, .5)); 
+    put(cyl(.4, .4, .05, 10), m.trim, 2.9, .45, 1.5); put(cyl(.05, .05, .42, 6), m.trim, 2.9, .21, 1.5); 
+    put(cyl(.25, .2, .5, 8), m.main, 3.8, .25, -2.3); put(new THREE.IcosahedronGeometry(.4, 0), m.accent, 3.8, .85, -2.3); put(new THREE.IcosahedronGeometry(.3, 0), m.accent, 3.65, 1.3, -2.25); 
+    [-.4, .4].forEach(dx => put(B(.78, 2.2, .06), m.wall, -2.2 + dx, 1.1, BZ + .05)); put(B(1.8, .1, .1), m.trim, -2.2, 2.25, BZ + .05); [-1, 1].forEach(s => put(B(.1, 2.3, .1), m.trim, -2.2 + s * .85, 1.15, BZ + .05)); 
+    put(B(2, .4, .8), m.main, -1.6, .2, .9); put(B(2, .5, .2), m.main, -1.6, .55, .55); 
+    put(B(2.6, .02, 1.9), m.trim, 5.9, .01, 2.7); put(cyl(.45, .45, .05, 10), m.main, 5.9, .72, 2.7); put(cyl(.06, .06, .7, 6), m.main, 5.9, .35, 2.7); 
+    const ic = new THREE.Group(); shield(m, ic); ic.position.set(X(.6), y + 1.9, BZ + .05); g.add(ic);
+  }
+}
+const ICON1F = {"bell":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[0,0.06,0.26,0.06,0.2252,0.19,0,0.06,0.2252,0.19,0.13,0.2852,0,0.06,0.13,0.2852,0.0,0.32,0,0.06,0.0,0.32,-0.13,0.2852,0,0.06,-0.13,0.2852,-0.2252,0.19,0,0.06,-0.2252,0.19,-0.26,0.06,-0.26,0.06,-0.34,-0.18,0.34,-0.18,-0.26,0.06,0.34,-0.18,0.26,0.06,-0.38,-0.24,0.38,-0.24,0.38,-0.18,-0.38,-0.24,0.38,-0.18,-0.38,-0.18,0,-0.3,0.06,-0.3,0.03,-0.248,0,-0.3,0.03,-0.248,-0.03,-0.248,0,-0.3,-0.03,-0.248,-0.06,-0.3,0,-0.3,-0.06,-0.3,-0.03,-0.352,0,-0.3,-0.03,-0.352,0.03,-0.352,0,-0.3,0.03,-0.352,0.06,-0.3,-0.04,0.32,0.04,0.32,0.04,0.4,-0.04,0.32,0.04,0.4,-0.04,0.4]},"coffee":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[-0.24,0.1,-0.18,-0.22,0.18,-0.22,-0.24,0.1,0.18,-0.22,0.24,0.1,0.21,-0.12,0.21,-0.18,0.3019,-0.1419,0.21,-0.12,0.3019,-0.1419,0.2595,-0.0995,0.2595,-0.0995,0.3019,-0.1419,0.34,-0.05,0.2595,-0.0995,0.34,-0.05,0.28,-0.05,0.28,-0.05,0.34,-0.05,0.3019,0.0419,0.28,-0.05,0.3019,0.0419,0.2595,-0.0005,0.2595,-0.0005,0.3019,0.0419,0.21,0.08,0.2595,-0.0005,0.21,0.08,0.21,0.02,-0.32,-0.285,0.32,-0.285,0.32,-0.235,-0.32,-0.285,0.32,-0.235,-0.32,-0.235,-0.1425,0.135,-0.0975,0.135,-0.0575,0.245,-0.1425,0.135,-0.0575,0.245,-0.1025,0.245,-0.1025,0.245,-0.0575,0.245,-0.0975,0.355,-0.1025,0.245,-0.0975,0.355,-0.1425,0.355,-0.0225,0.135,0.0225,0.135,0.0625,0.245,-0.0225,0.135,0.0625,0.245,0.0175,0.245,0.0175,0.245,0.0625,0.245,0.0225,0.355,0.0175,0.245,0.0225,0.355,-0.0225,0.355,0.0975,0.135,0.1425,0.135,0.1825,0.245,0.0975,0.135,0.1825,0.245,0.1375,0.245,0.1375,0.245,0.1825,0.245,0.1425,0.355,0.1375,0.245,0.1425,0.355,0.0975,0.355]},"sofa":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[-0.28,-0.03,0.28,-0.03,0.28,0.23,-0.28,-0.03,0.28,0.23,-0.28,0.23,-0.28,-0.15,0.28,-0.15,0.28,-0.03,-0.28,-0.15,0.28,-0.03,-0.28,-0.03,-0.39,-0.17,-0.29,-0.17,-0.29,0.13,-0.39,-0.17,-0.29,0.13,-0.39,0.13,0.29,-0.17,0.39,-0.17,0.39,0.13,0.29,-0.17,0.39,0.13,0.29,0.13,-0.33,-0.25,-0.27,-0.25,-0.27,-0.17,-0.33,-0.25,-0.27,-0.17,-0.33,-0.17,0.27,-0.25,0.33,-0.25,0.33,-0.17,0.27,-0.25,0.33,-0.17,0.27,-0.17]},"elevator":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[-0.3,0.08,-0.04,0.08,-0.17,0.36,-0.22,-0.18,-0.12,-0.18,-0.12,0.08,-0.22,-0.18,-0.12,0.08,-0.22,0.08,0.04,-0.08,0.3,-0.08,0.17,-0.36,0.12,-0.08,0.22,-0.08,0.22,0.18,0.12,-0.08,0.22,0.18,0.12,0.18]},"members":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[-0.08,0.09,0.08,0.09,0.08,0.25,-0.08,0.09,0.08,0.25,-0.08,0.25,0,-0.2,0.2,-0.2,0.1414,-0.0586,0,-0.2,0.1414,-0.0586,0.0,0.0,0,-0.2,0.0,0.0,-0.1414,-0.0586,0,-0.2,-0.1414,-0.0586,-0.2,-0.2,-0.33,0.01,-0.21,0.01,-0.21,0.13,-0.33,0.01,-0.21,0.13,-0.33,0.13,-0.27,-0.2,-0.12,-0.2,-0.1639,-0.0939,-0.27,-0.2,-0.1639,-0.0939,-0.27,-0.05,-0.27,-0.2,-0.27,-0.05,-0.3761,-0.0939,-0.27,-0.2,-0.3761,-0.0939,-0.42,-0.2,0.21,0.01,0.33,0.01,0.33,0.13,0.21,0.01,0.33,0.13,0.21,0.13,0.27,-0.2,0.42,-0.2,0.3761,-0.0939,0.27,-0.2,0.3761,-0.0939,0.27,-0.05,0.27,-0.2,0.27,-0.05,0.1639,-0.0939,0.27,-0.2,0.1639,-0.0939,0.12,-0.2]},"footprints":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[-0.13,0.06,-0.03,0.06,-0.08,0.2072,-0.13,0.06,-0.08,0.2072,-0.18,0.2072,-0.13,0.06,-0.18,0.2072,-0.23,0.06,-0.13,0.06,-0.23,0.06,-0.18,-0.0872,-0.13,0.06,-0.18,-0.0872,-0.08,-0.0872,-0.13,0.06,-0.08,-0.0872,-0.03,0.06,-0.19,-0.29,-0.07,-0.29,-0.07,-0.19,-0.19,-0.29,-0.07,-0.19,-0.19,-0.19,0.13,0.14,0.23,0.14,0.18,0.2872,0.13,0.14,0.18,0.2872,0.08,0.2872,0.13,0.14,0.08,0.2872,0.03,0.14,0.13,0.14,0.03,0.14,0.08,-0.0072,0.13,0.14,0.08,-0.0072,0.18,-0.0072,0.13,0.14,0.18,-0.0072,0.23,0.14,0.07,-0.21,0.19,-0.21,0.19,-0.11,0.07,-0.21,0.19,-0.11,0.07,-0.11]}};
+
+const LOBBY = {
+  DESK: [1.2, -4.9],            
+  SPOT: [-1.2, -4.9],           
+  QUEUE: [[10.9, -5.4], [10.9, -4.2], [10.9, -3.0], [10.9, -1.8], [10.9, -.6]], 
+  CAFE_PICK: [11.5, -6.6],      
+  CAFE_SEATS: [[12.0, -4.4], [13.6, -4.4], [12.0, -2.2], [13.6, -2.2], [12.0, 0], [13.6, 0]], 
+  WAIT_SEATS: [],               
+  MEMBER_SPOTS: []              
+};
+
+const COFFEE = { enabled: false, cooldown: 600, last: {}, canGo(k, now) { return this.enabled && (now - (this.last[k] || -1e9)) >= this.cooldown; }, start() { return false; } };
+const L1 = { wall: nm('F1_wall_dark', 0x4A3C36), floor: nm('F1_floor_stone', 0xCDBFA8), main: nm('F1_main', 0x1C1A1C), gold: nm('F1_gold', 0xC9A24E, GOLD), 
+  wine: nm('F1_wine_wall', 0x6E2A3A), carpet: nm('F1_carpet', 0x0E0C0E, { roughness: 1 }), green: nm('F1_plant', 0x547A5C), seat: nm('F1_seat', 0x3A2F31), shade: nm('F1_shade', 0xFFF1DC, LAMP(0xFFF1DC)) };
+const ICM = { disc: new THREE.MeshBasicMaterial({ color: 0x141414, name: 'ICON_disc' }), frame: new THREE.MeshBasicMaterial({ color: 0xD4A944, name: 'ICON_frame' }), glyph: new THREE.MeshBasicMaterial({ color: 0xEBC65E, name: 'ICON_glyph' }) };
+const ICZ = { disc: 0, frame: .03, glyph: .06 }; 
+function iconGeo(name, layer) { const a = ICON1F[name][layer], p = [];
+  for (let i = 0; i < a.length; i += 6) { let [x1, y1, x2, y2, x3, y3] = a.slice(i, i + 6); if ((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1) < 0) { [x2, x3] = [x3, x2]; [y2, y3] = [y3, y2]; } 
+    p.push(x1, y1, ICZ[layer], x2, y2, ICZ[layer], x3, y3, ICZ[layer]); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.computeVertexNormals(); return g; }
+function placeIcon(name, g, x, y, z, ry, s, flat) { ['disc', 'frame', 'glyph'].forEach(l => { const o = new THREE.Mesh(iconGeo(name, l), ICM[l]); o.position.set(x, y, z); if (flat) o.rotation.x = -Math.PI / 2; else o.rotation.y = ry || 0; if (s) o.scale.setScalar(s); o.userData.icon = name; g.add(o); }); }
+
+function inst(geo, m, list, g, rotY, keep) { if (!keep && (m === L1.gold || m === L1.main || m === L1.seat || m === L1.wine)) { list.forEach(p => { const o = mesh(geo, m, p[0], p[1], p[2], g); o.rotation.y = p[3] !== undefined ? p[3] : (rotY || 0); }); return null; }  const im = new THREE.InstancedMesh(geo, m, list.length), o = new THREE.Object3D();
+  list.forEach((p, i) => { o.position.set(p[0], p[1], p[2]); o.rotation.set(0, p[3] !== undefined ? p[3] : (rotY || 0), 0); o.updateMatrix(); im.setMatrixAt(i, o.matrix); });
+  im.castShadow = true; im.receiveShadow = true; im.userData.inst = 1; g.add(im); return im; }
+function lobby1F(y, g, m) { const BZ1 = -D1 / 2 + .2, P = (geo, mm, x, yy, z) => mesh(geo, mm, x, y + yy, z, g), XW = W1 / 2 - .22;
+  
+  P(B(3, .02, 13.6), L1.carpet, 0, .012, 2.9); [-1, 1].forEach(s => P(B(.14, .022, 13.6), L1.gold, s * 1.57, .014, 2.9)); P(B(3.28, .022, .14), L1.gold, 0, .014, -3.87);
+  
+  P(B(13, FH1 - T - .1, .06), L1.wine, 0, (FH1 - T) / 2, BZ1 + .05);
+  for (let k = -7; k <= 7; k++) { const a = k * .2, len = Math.min(6.2, (FH1 - T - .15 - 1.7) / Math.max(.2, Math.cos(a))), r = P(new THREE.PlaneGeometry(.09, len), L1.gold, Math.sin(a) * len / 2, 1.7 + Math.cos(a) * len / 2, BZ1 + .1); r.rotation.z = -a; } 
+  P(B(3.4, 1.8, .08), L1.gold, 0, 2.0, BZ1 + .14); P(B(3.2, 1.6, .1), L1.main, 0, 2.0, BZ1 + .16); 
+  
+  const pil = []; for (let z = -8; z <= 8; z += 2.67) [-1, 1].forEach(s => pil.push([s * (XW - .03), y + (FH1 - T) / 2, z]));
+  inst(B(.05, FH1 - T - .2, .14), L1.gold, pil, g);
+  
+  P(B(7, 1.1, 1.2), L1.main, 0, .55, -6); P(B(7.04, .14, 1.24), L1.gold, 0, .82, -6); P(B(7.2, .06, 1.4), L1.gold, 0, 1.13, -6);
+  [-1, 1].forEach(s => P(B(.03, 1.6, .03), L1.gold, s * .5, 4.9, -6.2)); placeIcon('bell', g, 0, y + 3.9, -6.2); 
+  
+  [[0, .44, .8, .04], [0, -.44, .8, .04], [.38, 0, .04, .84], [-.38, 0, .04, .84]].forEach(e => P(B(e[2], .02, e[3]), L1.gold, LOBBY.SPOT[0] + e[0], .02, LOBBY.SPOT[1] + e[1]));
+  
+  const COLS = []; [6.8, 3.4, -1.0].forEach(z => [-1, 1].forEach(s => COLS.push([s * 3.4, z])));
+  inst(B(.7, FH1 - T - .4, .7), L1.main, COLS.map(c => [c[0], y + (FH1 - T) / 2, c[1]]), g, 0, 1);
+  inst(B(.95, .24, .95), L1.gold, COLS.map(c => [c[0], y + FH1 - T - .32, c[1]]), g); inst(B(.95, .16, .95), L1.gold, COLS.map(c => [c[0], y + .08, c[1]]), g);
+  
+  const CH = [[-2.4, 5.1, 0], [2.4, 5.1, 0], [-2.4, 1.2, 0], [2.4, 1.2, 0], [-2.4, -3.2, .5], [2.4, -3.2, .5]]; 
+  inst(cyl(.02, .02, 1.2, 4), L1.gold, CH.map(c => [c[0], y + FH1 - T - .6 + c[2] / 2, c[1]]), g); inst(new THREE.ConeGeometry(.9, .6, 8, 1, true), L1.shade, CH.map(c => [c[0], y + FH1 - T - 1.35 + c[2], c[1]]), g, 0, 1);
+  inst(new THREE.SphereGeometry(.32, 6, 4), m.light, CH.map(c => [c[0], y + FH1 - T - 1.55 + c[2], c[1]]), g);
+  
+  [-1, 1].forEach(s => { const x = s * ELEV_X; P(B(1.7, FH1 - T - 2.45, .3), L1.main, x, 2.45 + (FH1 - T - 2.45) / 2, ELEV_Z + .62); P(B(1.74, .06, .32), L1.gold, x, 2.45, ELEV_Z + .62);
+    [-1, 1].forEach(d => P(B(.08, FH1 - T, .32), L1.gold, x + d * .85, (FH1 - T) / 2, ELEV_Z + .62)); placeIcon('elevator', g, x, y + 3.6, ELEV_Z + .78); });
+  
+  P(B(6, 1.1, 1), L1.main, 11.5, .55, -7.6); P(B(6.04, .12, 1.04), L1.gold, 11.5, 1.1, -7.6); P(B(1, 1.1, 2.4), L1.main, 9, .55, -6.4); P(B(1.04, .12, 2.44), L1.gold, 9, 1.1, -6.4);
+  P(B(.9, .7, .6), L1.gold, 12.6, 1.5, -7.8); P(B(.5, .5, .5), L1.wine, 10.8, 1.4, -7.8);
+  P(B(4, 2, .06), L1.main, 11.5, 2.8, BZ1 + .04); placeIcon('coffee', g, 11.5, y + 2.8, BZ1 + .08);
+  inst(cyl(.05, .05, .95, 6), L1.gold, LOBBY.QUEUE.map(q => [q[0] - .7, y + .475, q[1]]), g);
+  for (let k = 0; k < 4; k++) P(B(.03, .03, 1.2), L1.wine, 10.2, .85, LOBBY.QUEUE[k][1] + .6);
+  placeIcon('footprints', g, 10.9, y + .006, .7, 0, .53, true); 
+  const CT = [[12.8, -4.4], [12.8, -2.2], [12.8, 0]];
+  inst(cyl(.45, .45, .05, 10), L1.gold, CT.map(c => [c[0], y + .75, c[1]]), g); inst(cyl(.06, .06, .72, 6), L1.main, CT.map(c => [c[0], y + .36, c[1]]), g);
+  inst(B(.42, .45, .42), L1.seat, LOBBY.CAFE_SEATS.map(c => [c[0] === 12 ? 12.0 : 13.6, y + .225, c[1]]), g);
+  
+  P(B(1.4, 2, .1), L1.gold, 7.4, 1.6, BZ1 + .08); P(B(1.2, 1.8, .12), L1.main, 7.4, 1.6, BZ1 + .1); P(B(1.2, .04, .3), L1.gold, 7.4, 1.2, BZ1 + .25);
+  
+  const WZ = [[-11.5, 3.8], [-6.5, 3.8], [-11.5, 7.6]], MZ = WZ.map(p => [-p[0], p[1]]);
+  inst(B(3.2, .02, 2.6), L1.wine, WZ.concat(MZ).map(p => [p[0], y + .012, p[1]]), g);
+  const sofa = [], back = []; WZ.forEach(p => [-1, 1].forEach(s => { sofa.push([p[0], y + .2, p[1] + s * 1.0, s > 0 ? Math.PI : 0]); back.push([p[0], y + .55, p[1] + s * 1.35]); [-.55, .55].forEach(dx => LOBBY.WAIT_SEATS.push([p[0] + dx, p[1] + s * 1.0, s > 0 ? Math.PI : 0])); }));
+  inst(B(2.4, .4, .8), L1.seat, sofa, g); inst(B(2.4, .5, .2), L1.seat, back, g);
+  inst(cyl(.4, .4, .05, 10), L1.gold, WZ.map(p => [p[0], y + .45, p[1]]), g); inst(cyl(.05, .05, .42, 6), L1.gold, WZ.map(p => [p[0], y + .21, p[1]]), g);
+  inst(cyl(.45, .45, .05, 10), L1.main, MZ.map(p => [p[0], y + 1.05, p[1]]), g); inst(cyl(.06, .06, 1, 6), L1.gold, MZ.map(p => [p[0], y + .5, p[1]]), g);
+  MZ.forEach(p => [[0, .9], [0, -.9], [.9, 0], [-.9, 0]].forEach(d => LOBBY.MEMBER_SPOTS.push([p[0] + d[0], p[1] + d[1]])));
+  [[8.5, 5.7], [14, 5.7], [9, 9.2], [12, 9.2], [14, 2.3], [6.2, 9.2]].forEach(p => LOBBY.MEMBER_SPOTS.push(p)); 
+  for (let x = 5.6; x <= 14; x += 1.4) for (let z = 1.9; z <= 9.4; z += 1.25) { if (LOBBY.MEMBER_SPOTS.length >= 30) break; if (MZ.some(p => Math.hypot(p[0] - x, p[1] - z) < 1.5) || LOBBY.MEMBER_SPOTS.some(p => Math.hypot(p[0] - x, p[1] - z) < .9)) continue; LOBBY.MEMBER_SPOTS.push([x, z]); }
+  placeIcon('sofa', g, -XW + .04, y + 2.8, 5.7, Math.PI / 2); placeIcon('members', g, XW - .04, y + 2.8, 5.7, -Math.PI / 2);
+  
+  const PL = [[-13.8, 9], [13.8, 9], [-13.8, -9], [-7.4, -9]];
+  inst(cyl(.35, .28, .7, 8), L1.main, PL.map(p => [p[0], y + .35, p[1]]), g); inst(new THREE.IcosahedronGeometry(.6, 0), L1.green, PL.map(p => [p[0], y + 1.2, p[1]]), g);
+}
+
+function mergeStatic(root, shallow) {
+  root.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), byMat = new Map(), kill = [];
+  root.traverse(o => { if (!o.isMesh || o.isInstancedMesh || o.userData.dyn || !o.material || o.material.visible === false || o === root) return;
+    if (shallow && o.parent !== root) return;
+    let p = o.parent; while (p && p !== root) { if (p.userData && p.userData.dyn) return; p = p.parent; }
+    const geo = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); ['uv', 'uv1', 'uv2'].forEach(a => geo.deleteAttribute(a));
+    geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld)); const k = o.material.uuid + (o.renderOrder || 0);
+    if (!byMat.has(k)) byMat.set(k, { m: o.material, ro: o.renderOrder, list: [] }); byMat.get(k).list.push(geo); kill.push(o); });
+  kill.forEach(o => o.parent.remove(o));
+  byMat.forEach(v => { const geo = mergeGeometries(v.list, false); if (!geo) return; const me = new THREE.Mesh(geo, v.m); me.castShadow = true; me.receiveShadow = true; me.renderOrder = v.ro; me.name = 'merged_' + (v.m.name || ''); root.add(me); });
+}
+
+const WINE = nm('SIGN_wine', 0x4A1418); 
+function build(floors) {
+  while (world.children.length) world.remove(world.children[0]); floorPick.length = 0; topFloorY = null; Object.keys(LOCKED).forEach(k => delete LOCKED[k]);
+  const list = floors.slice().reverse(); const n = list.length; const H = FH1 + (n - 1) * FH; const W0 = W, D0 = D, FH0 = FH;
+  mesh(B(60, .2, 40), mat(0x15111c), 0, -.1, 0, world, false);
+  mesh(B(W + 2, .25, D + 2.5), mat(0x2b2230), 0, .02, .8, world, false);
+  list.forEach((f, i) => {
+    const fid = FM[f.floor_id] ? f.floor_id : '1F', m = FM[fid], st = STYLE[fid], y = i ? FH1 + (i - 1) * FH0 : 0; const W = i ? W0 : W1, D = i ? D0 : D1, FH = i ? FH0 : FH1; floorY[f.floor_id] = y; LOCKED[f.floor_id] = !!f.locked;
+    mesh(B(W, T, D), SH.cut, 0, y + T / 2, 0, world);                                   
+    mesh(B(W - .5, .02, D - .4), m.floor, 0, y + T + .01, 0, world, false);              
+    mesh(B(W + .02, .04, .04), SH.trim, 0, y + T, D / 2 + .01, world, false);           
+    mesh(B(W - .4, FH - T, .2), m.wall, 0, y + T + (FH - T) / 2, -D / 2 + .1, world);    
+    [-1, 1].forEach(s => { mesh(B(.2, FH, D), SH.main, s * (W / 2 - .1), y + FH / 2, 0, world); mesh(B(.04, FH - T, D - .4), m.wall, s * (W / 2 - .22), y + T + (FH - T) / 2, 0, world, false); });
+    if (fid === '3F') mesh(B(.04, FH - T - .6, 3.2), RED3, -(W / 2 - .25), y + T + (FH - T - .6) / 2, -3.6, world, false); 
+    if (fid === 'RF' || fid === '1F') mesh(B(W - .5, .1, .03), m.trim, 0, y + T + .05, BZ + .02, world, false);   
+    const g = new THREE.Group(); g.name = 'F' + st.label.replace('F', '') + '_furniture'; world.add(g); furnGroups[f.floor_id] = g; if (!f.locked) { if (fid === '1F') lobby1F(y + T, g, m); else furnish(fid, y + T, g); buildExtras(f.floor_id, y + T, g, m); mergeStatic(g); } else mesh(B(W - .3, FH - T - .04, D - .3), FROST, 0, y + T + (FH - T) / 2, 0, world, false); 
+    
+    { const lite = matchMedia('(pointer: coarse)').matches || innerWidth < 760; 
+      const WL = [[-(W / 2 - 2.2), 0], [W / 2 - 2.2, 0], [0, BZ + 2.2], [0, D / 2 - 2.2]].filter((p, j) => !lite || j < 2);
+      WL.forEach(p => { const Lw = new THREE.PointLight(st.light, (lite ? 9 : 6) * (fid === '1F' ? 1.1 : 1), fid === '1F' ? 26 : 18, 1.2); Lw.position.set(p[0], y + FH - .9, p[1]); Lw.name = fid + '_wallLight'; world.add(Lw); }); }
+    
+    mesh(new THREE.PlaneGeometry(W - .5, FH - .2), new THREE.MeshStandardMaterial({ color: 0x9fb6d8, transparent: true, opacity: .06, roughness: .2, depthWrite: false }), 0, y + FH / 2, D / 2, world, false);
+    for (let k = -2; k <= 2; k++) if (i || k) mesh(B(.04, FH - .2, .04), SH.trim, k * (W / 4.2), y + FH / 2, D / 2 + .01, world, false);
+    const pick = mesh(B(W, FH, D), new THREE.MeshBasicMaterial({ visible: false }), 0, y + FH / 2, 0, world, false); pick.userData.fid = f.floor_id; floorPick.push(pick);
+    if (f.floor_id === 'RF' && !f.locked) topFloorY = y + T;
+    if (i === 0) {
+      mesh(B(4.2, .7, .06), WINE, 0, y + FH - .5, D / 2 + .15, world, false); 
+      mesh(B(4.4, .85, .08), SH.trim, 0, y + FH - .5, D / 2 + .1, world, false);
+      [-1, 1].forEach(sx => mesh(B(.08, 2.75, .12), SH.trim, sx * 1.6, y + 1.375 + T, D / 2 + .05, world, false)); mesh(B(3.28, .05, .12), SH.trim, 0, y + 2.75 + T, D / 2 + .05, world, false); 
+      [-1, 1].forEach(s => { mesh(B(1.3, .85, .5), SH.main, s * 1.55, y + .425 + T, D / 2 - 1.6, world); mesh(B(1.34, .05, .54), L1.gold, s * 1.55, y + .875 + T, D / 2 - 1.6, world); }); 
+    }
+  });
+  const HT = H - FH1; [-1, 1].forEach(s => { mesh(B(.08, HT, .08), SH.trim, s * W / 2, FH1 + HT / 2, D / 2 + .02, world, false); mesh(B(.08, HT, .08), SH.trim, s * W / 2, FH1 + HT / 2, -D / 2, world, false);
+    for (let k = 1; k < 4; k++) mesh(B(.02, HT, .04), SH.trim, s * (W / 2 + .01), FH1 + HT / 2, -D / 2 + k * D / 4, world, false); });
+  
+  mesh(B(W1 + .3, .34, D1 + .3), SH.main, 0, FH1 + .02, 0, world); [[0, D1 / 2 + .16, W1 + .36, .06], [0, -D1 / 2 - .16, W1 + .36, .06]].forEach(e => mesh(B(e[2], .06, e[3]), SH.trim, e[0], FH1 + .2, e[1], world, false));
+  [-1, 1].forEach(s => { mesh(B(.06, .06, D1 + .36), SH.trim, s * (W1 / 2 + .16), FH1 + .2, 0, world, false); [D1 / 2 + .02, -D1 / 2].forEach(z => mesh(B(.1, FH1 + .2, .1), SH.trim, s * W1 / 2, FH1 / 2, z, world, false));
+    for (let k = 1; k < 6; k++) mesh(B(.02, FH1, .04), SH.trim, s * (W1 / 2 + .01), FH1 / 2, -D1 / 2 + k * D1 / 6, world, false); });
+  mesh(B(W1 + .3, .06, .06), SH.trim, 0, .06, D1 / 2 + .14, world, false);
+  [[0, D1 / 2 + .18, W1 + .4, .05], [0, -D1 / 2 - .18, W1 + .4, .05], [W1 / 2 + .18, 0, .05, D1 + .4], [-W1 / 2 - .18, 0, .05, D1 + .4]].forEach(e => mesh(B(e[2], .05, e[3]), L1.gold, e[0], FH1 + .1, e[1], world, false)); 
+  { const FZ = D1 / 2 + 1.6, U = (parts) => mergeGeometries(parts.map(q => { const gg = q[0].index ? q[0].toNonIndexed() : q[0]; ['uv'].forEach(a => gg.deleteAttribute(a)); gg.translate(q[1], q[2], q[3]); return gg; })); 
+    const unit = [[U([[cyl(.06, .08, 3, 6), 3.2, 1.5, 0], [B(.8, .55, .8), 2.0, .28, -.2]]), SH.main], [U([[B(.36, .08, .36), 3.2, 3.0, 0], [B(.86, .05, .86), 2.0, .57, -.2]]), L1.gold], [U([[new THREE.IcosahedronGeometry(.2, 0), 3.2, 3.22, 0]]), FM['1F'].light], [U([[new THREE.IcosahedronGeometry(.42, 0), 2.0, .95, -.2]]), L1.green]];
+    unit.forEach(([geo, mm]) => { const im = new THREE.InstancedMesh(geo, mm, 2), o = new THREE.Object3D(); [1, -1].forEach((sx, i) => { o.position.set(0, 0, FZ); o.scale.set(sx, 1, 1); o.updateMatrix(); im.setMatrixAt(i, o.matrix); }); im.castShadow = true; world.add(im); }); } 
+  let y = H, w = W + .3, d = D + .3; [[.9, 1.0], [.72, .9], [.52, .8]].forEach((s) => {
+    const hh = s[1]; mesh(B(w * s[0], hh, d * s[0]), SH.main, 0, y + hh / 2, 0, world); mesh(B(w * s[0] + .06, .06, d * s[0] + .06), SH.trim, 0, y + hh, 0, world, false);
+    for (let j = -2; j <= 2; j++) mesh(B(.05, hh, .03), SH.trim, j * w * s[0] / 6, y + hh / 2, d * s[0] / 2 + .01, world, false); y += hh; });
+  mesh(new THREE.ConeGeometry(.35, 2.2, 4), SH.trim, 0, y + 1.1, 0, world);
+  mergeStatic(world, true); 
+  camHome(H);
+}
+function triCount(o) { let n = 0; o.traverse(x => { if (x.isMesh && x.visible) { const g = x.geometry; n += (g.index ? g.index.count : g.attributes.position.count) / 3; } }); return Math.round(n); }
+
+scene.add(new THREE.HemisphereLight(0xc8c6d8, 0x3a3230, .85));
+const moon = new THREE.DirectionalLight(0xbfc8ff, .9); moon.position.set(-12, 30, 22); moon.castShadow = true;
+moon.shadow.mapSize.set(2048, 2048); moon.shadow.radius = 4; Object.assign(moon.shadow.camera, { left: -24, right: 24, top: 30, bottom: -6, near: 1, far: 80 }); moon.shadow.bias = -.0005; scene.add(moon);
+function doorSync(fid) { const L = DOORS[fid], im = L && L.im; if (!im) return; L.forEach((D0, j) => D0.pan.forEach((p, i) => { p.updateMatrix(); im.setMatrixAt(j * 2 + i, p.matrix); })); im.instanceMatrix.needsUpdate = true; }
+const ELEV_X = W / 2 - .75, ELEV_Z = 0, ELEV_GLASS = new THREE.MeshStandardMaterial({ color: 0x9fb6d8, transparent: true, opacity: .16, roughness: .2, depthWrite: false });
+const DOORS = {};
+function buildExtras(fid, y, g, m) {
+  DOORS[fid] = [-1, 1].map(s => { const x = s * ELEV_X, h = (fid === '1F' ? FH1 : FH) - T - .25;
+    const sh = new THREE.Mesh(B(.95, h, .95), ELEV_GLASS); sh.position.set(x, y + h / 2, ELEV_Z); sh.renderOrder = 2; g.add(sh);
+    const fr = new THREE.Mesh(B(1.0, .06, .06), m.trim); fr.position.set(x, y + 2.3, ELEV_Z + .5); g.add(fr);
+    const pan = [-1, 1].map(d => { const p = new THREE.Object3D(); p.position.set(x + d * .21, y + 1.12, ELEV_Z + .49); g.add(p); return p; });
+    return { pan, x }; });
+  const im = new THREE.InstancedMesh(B(.42, 2.2, .04), m.trim, 4); im.userData.dyn = 1; g.add(im); DOORS[fid].im = im; doorSync(fid);
+}
+
+const target = new THREE.Vector3(), camPos = new THREE.Vector3(); let tweenT = 1; const from = { p: new THREE.Vector3(), t: new THREE.Vector3() };
+let towerH = 4 * FH;
+function camHome(H) { towerH = H; const a = innerWidth / Math.max(1, innerHeight); setCam(new THREE.Vector3(0, (H + 4) / 2, 0), a < 1 ? 82 / a : 88 + (innerWidth < 860 ? 30 : 0), true); }
+function setCam(t, dist, now) { from.p.copy(camera.position); from.t.copy(controls.target); target.copy(t); camPos.set(t.x + dist * .12, t.y + dist * .05, t.z + dist); tweenT = now ? 1 : 0; if (now) { camera.position.copy(camPos); controls.target.copy(target); } }
+build([{ floor_id: 'RF' }, { floor_id: '3F' }, { floor_id: '2F' }, { floor_id: '1F' }]);
+
+const PEOPLE = [], NP = 8, SKIN = [0x8A8A8A, 0x9A968F, 0x7B7F84, 0xA3A3A3, 0x8E8A84, 0x6F7378, 0x989C9F, 0x85817B];
+const PART = { torso: [B(.5, .62, .3), .95], head: [B(.36, .36, .36), 1.48], leg: [B(.2, .62, .22), .31], arm: [B(.15, .58, .17), .96] };
+const IM = {}; ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => { const p = PART[k.replace(/[LR]$/, '')]; const im = new THREE.InstancedMesh(p[0], new THREE.MeshStandardMaterial({ roughness: .9, flatShading: true }), NP); im.castShadow = true; im.frustumCulled = false; IM[k] = im; scene.add(im); });
+const AREA = { '1F': { x: [-12.5, 12.5], z: [-3.5, 8.5] }, up: { x: [-6.8, 6.8], z: [-3.6, 4.6] } };
+const rnd = (a, b) => a + Math.random() * (b - a);
+const FL = ['1F', '1F', '1F', '1F', '1F', '2F', '3F', 'RF'];
+function pick(p) { const A = p.fid === '1F' ? AREA['1F'] : AREA.up; return [rnd(A.x[0], A.x[1]), rnd(A.z[0], A.z[1])]; }
+for (let i = 0; i < NP; i++) { const p = { fid: FL[i], sc: 1.15, ph: Math.random() * 6, pause: rnd(0, 3) }; const q = pick(p); p.x = q[0]; p.z = q[1]; p.to = pick(p); p.ry = 0; p.y = floorY[p.fid] + T; PEOPLE.push(p);
+  const c = new THREE.Color(SKIN[i]), d = new THREE.Color(SKIN[i]).multiplyScalar(.7); Object.keys(IM).forEach(k => IM[k].setColorAt(i, /leg/.test(k) ? d : c)); }
+const o3 = new THREE.Object3D(), pv = new THREE.Object3D(); o3.add(pv);
+function place(im, i, p, lx, ly, swing, part) { o3.position.set(p.x, p.y, p.z); o3.rotation.set(0, p.ry, 0); o3.scale.setScalar(p.sc); const h = PART[part][0].parameters.height;
+  pv.position.set(lx, ly + h / 2, 0); pv.rotation.set(swing, 0, 0); pv.updateMatrix(); o3.updateMatrix(); const m = new THREE.Matrix4().makeTranslation(0, -h / 2, 0); im.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(o3.matrix, pv.matrix).multiply(m)); }
+function people(dt, t) { PEOPLE.forEach((p, i) => { let sw = 0;
+  if (p.pause > 0) p.pause -= dt; else { const dx = p.to[0] - p.x, dz = p.to[1] - p.z, d = Math.hypot(dx, dz);
+    if (d < .1) { p.pause = rnd(2, 6); p.to = pick(p); } else { const v = Math.min(d, .9 * dt); p.x += dx / d * v; p.z += dz / d * v; const ry = Math.atan2(dx, dz); p.ry += Math.atan2(Math.sin(ry - p.ry), Math.cos(ry - p.ry)) * Math.min(1, dt * 6); sw = Math.sin(t * 7 + p.ph) * .5; } }
+  const br = sw ? 0 : Math.sin(t * 1.6 + p.ph) * .01;
+  place(IM.torso, i, p, 0, .64 + br, 0, 'torso'); place(IM.head, i, p, 0, 1.3 + br, 0, 'head');
+  place(IM.legL, i, p, -.13, 0, sw, 'leg'); place(IM.legR, i, p, .13, 0, -sw, 'leg');
+  place(IM.armL, i, p, -.33, .66 + br, -sw * .8, 'arm'); place(IM.armR, i, p, .33, .66 + br, sw * .8, 'arm'); });
+  Object.values(IM).forEach(im => { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }); }
+
+const info = document.getElementById('info'); document.getElementById('ix').onclick = () => info.style.display = 'none';
+const ray = new THREE.Raycaster(), mv = new THREE.Vector2(); let down = null;
+renderer.domElement.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
+renderer.domElement.addEventListener('pointerup', e => { if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return; const r = renderer.domElement.getBoundingClientRect();
+  mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, camera);
+  if (ray.intersectObject(world, true).length) info.style.display = 'block'; });
+
+function resize() { const w = box.clientWidth || 800, h = box.clientHeight || 600; renderer.setSize(w, h, false); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+const clock = new THREE.Clock(); let last = 0;
+for (let k = 0; k < 90; k++) people(1 / 30, k / 30);
+function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(), dt = Math.min(.1, t - last); last = t; if (!SHOT) people(dt, t);
+  if (tweenT < 1) { tweenT = Math.min(1, tweenT + .045); const k = 1 - Math.pow(1 - tweenT, 3); camera.position.lerpVectors(from.p, camPos, k); controls.target.lerpVectors(from.t, target, k); }
+  controls.update(); composer.render(); }
+function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
+window.Tower = { stats, scene };
+if (SHOT === 'lobby') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; target.set(0, y + 2.2, 0); camPos.set(1.5, y + 3.2, 24); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'info') info.style.display = 'block';
+document.title = 'STATS=' + JSON.stringify(stats());
+loop();
+
+</script></body></html>
