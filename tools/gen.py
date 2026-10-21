@@ -1,24 +1,25 @@
 import re
 L=open('/workspace/aiob/gas/tower3d.html',encoding='utf-8').read().split('\n')
 def R(a,b): return L[a-1:b]
-core = R(3,9)+R(11,58)+R(59,206)+R(213,268)+R(892,892)
+core = R(3,9)+R(11,58)+R(116,206)+R(213,268)+R(892,892)
 js='\n'.join(core)
 # P005 specifics
 js=js.replace("window.TOWER3D_FAIL = true; window.towerSetMode && window.towerSetMode('2d'); ","document.body.classList.add('nogl'); ")
 js=js.replace('miraFloorY','topFloorY')
+exec(open('/workspace/p007/tools/restyle.py',encoding='utf-8').read())
 js=re.sub(r'/\*.*?\*/','',js)
 js=re.sub(r'(?<![:\'"])//[^\n]*','',js)  # drop comments (they carry internal names)
 js=js.replace("red: 0x8C040C, ","")
 extras='''
 const ELEV_X = W / 2 - .75, ELEV_Z = 0, ELEV_GLASS = new THREE.MeshStandardMaterial({ color: 0x9fb6d8, transparent: true, opacity: .16, roughness: .2, depthWrite: false });
-const DOORS = {};
+const DOORS = {}, DOORM = mat(0xBFD9F2);
 function buildExtras(fid, y, g, m) {
   DOORS[fid] = [-1, 1].map(s => { const x = s * ELEV_X, h = (fid === '1F' ? FH1 : FH) - T - .25;
     const sh = new THREE.Mesh(B(.95, h, .95), ELEV_GLASS); sh.position.set(x, y + h / 2, ELEV_Z); sh.renderOrder = 2; g.add(sh);
     const fr = new THREE.Mesh(B(1.0, .06, .06), m.trim); fr.position.set(x, y + 2.3, ELEV_Z + .5); g.add(fr);
     const pan = [-1, 1].map(d => { const p = new THREE.Object3D(); p.position.set(x + d * .21, y + 1.12, ELEV_Z + .49); g.add(p); return p; });
     return { pan, x }; });
-  const im = new THREE.InstancedMesh(B(.42, 2.2, .04), m.trim, 4); im.userData.dyn = 1; g.add(im); DOORS[fid].im = im; doorSync(fid);
+  const im = new THREE.InstancedMesh(B(.42, 2.2, .04), DOORM, 4); im.userData.dyn = 1; g.add(im); DOORS[fid].im = im; doorSync(fid);
 }
 '''
 tail=open('/workspace/p007/tools/tail.js',encoding='utf-8').read()

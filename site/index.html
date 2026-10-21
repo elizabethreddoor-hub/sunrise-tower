@@ -37,8 +37,9 @@ const C = { ink: 0x231815, gold: 0xB48C4C, brand: 0x76161B, rose: 0xB76E79, glas
 const scene = new THREE.Scene();
 
 (function () { const c = document.createElement('canvas'); c.width = 4; c.height = 256; const g = c.getContext('2d');
-  const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#0b0a24'); gr.addColorStop(.55, '#241a4a'); gr.addColorStop(1, '#3b2456');
+  const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#0d2a4f'); gr.addColorStop(.55, '#2a5f95'); gr.addColorStop(1, '#7fb2dd');
   g.fillStyle = gr; g.fillRect(0, 0, 4, 256); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; scene.background = t; })();
+const GLASS = new THREE.MeshStandardMaterial({ color: 0x8CC8F2, transparent: true, opacity: .22, roughness: .15, depthWrite: false, name: 'GLASS_curtain' });
 const camera = new THREE.PerspectiveCamera(24, 1, 0.5, 400);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = 0.08;
@@ -54,81 +55,25 @@ const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 
 const nm = (name, hex, o) => { const m = mat(hex, Object.assign({ roughness: .85 }, o || {})); m.name = name; return m; };
 const GOLD = { metalness: .3, roughness: .8 }, LAMP = (hex) => ({ emissive: hex, emissiveIntensity: .5 });
-const SH = { main: nm('SHELL_main', 0x141012), trim: nm('SHELL_trim', 0xB48C4C, GOLD), cut: nm('SLAB_cut', 0x3A3236) };
+const SH = { main: nm('SHELL_main', 0xF4F6F9), trim: nm('SHELL_trim', 0xF08A24), cut: nm('SLAB_cut', 0xDCE3EB) };
 const FM = {
   RF: { wall: nm('F4_wall', 0x1E1A1C), floor: nm('F4_floor', 0x2A2224), main: nm('F4_main', 0x1E1A1C), trim: nm('F4_trim', 0xB48C4C, GOLD), accent: nm('F4_accent', 0x4A1418), light: nm('F4_light', 0xE8DCC8, LAMP(0xE8DCC8)) },
   '3F': { wall: nm('F3_wall', 0x241C1E), floor: nm('F3_floor', 0x2E2426), main: nm('F3_main', 0x5A2230), trim: nm('F3_trim', 0xC99A8A, GOLD), accent: nm('F3_accent', 0xEDE3DC), light: nm('F3_light', 0xC99A8A, LAMP(0xC99A8A)) },
   '2F': { wall: nm('F2_wall', 0x1F2326), floor: nm('F2_floor', 0x2B3034), main: nm('F2_main', 0x2A8C9E), accent: nm('F2_accent', 0x3FAE6A), trim: nm('F2_trim', 0xB48C4C, GOLD), light: nm('F2_light', 0x2A8C9E) },
-  '1F': { wall: nm('F1_wall', 0x4A3C36), floor: nm('F1_floor', 0xCDBFA8), trim: nm('F1_trim', 0xD8B36A, GOLD), main: nm('F1_main', 0x262320), accent: nm('F1_accent', 0x547A5C), light: nm('F1_light', 0xFFF4E0, LAMP(0xFFF4E0)) } 
+  '1F': { wall: nm('F1_wall', 0xEEF2F6), floor: nm('F1_floor', 0xE9EDF2), trim: nm('F1_trim', 0xF08A24), main: nm('F1_main', 0x2F6FB3), accent: nm('F1_accent', 0x547A5C), light: nm('F1_light', 0xFFFFFF, LAMP(0xFFFFFF)) } 
 };
+Object.keys(FM).forEach(k => FM[k] = FM['1F']);
 const STYLE = {
-  RF: { light: 0xFFC98A, fill: 0xC8503C, fillK: .25, label: '4F' }, '3F': { light: 0xFFD4C2, fill: 0xB0444C, fillK: .2, label: '3F' },
-  '2F': { light: 0xF4F1EA, fill: 0xE8E4DA, fillK: .2, label: '2F' }, '1F': { light: 0xFFE6C4, fill: 0xC9A45C, fillK: .2, label: '1F' }
+  RF: { light: 0xF4F8FF, fill: 0xC8503C, fillK: .25, label: '4F' }, '3F': { light: 0xF4F8FF, fill: 0xB0444C, fillK: .2, label: '3F' },
+  '2F': { light: 0xF4F1EA, fill: 0xE8E4DA, fillK: .2, label: '2F' }, '1F': { light: 0xF4F8FF, fill: 0xC9A45C, fillK: .2, label: '1F' }
 };
-const W = 18, D = 12, FH = 3.6, T = 0.18, BZ = -D / 2 + .2; const W1 = 30, D1 = 20, FH1 = 5.4; 
+const W = 30, D = 20, FH = 4.68, T = 0.18, BZ = -D / 2 + .2; const OFFICE_FLOORS = []; const W1 = 30, D1 = 20, FH1 = 7.02; 
 const world = new THREE.Group(); scene.add(world);
 const floorPick = [], floorY = {}, furnGroups = {};
 let built = '', topFloorY = null; const LOCKED = {}; 
 const FROST = new THREE.MeshBasicMaterial({ color: 0xd9dde6, transparent: true, opacity: .94, name: 'frost_shell' });
 const cyl = (rt, rb, h, s) => new THREE.CylinderGeometry(rt, rb, h, s);
 
-function crown(m, g) { mesh(cyl(.5, .5, .04, 8), m.light, 0, 0, -.06, g).rotation.x = Math.PI / 2; 
-  mesh(cyl(.32, .32, .2, 8), m.trim, 0, -.05, .12, g);
-  for (let i = 0; i < 5; i++) { const x = -.26 + i * .13; mesh(new THREE.ConeGeometry(.06, .2, 4), m.trim, x, .15, .12, g); mesh(new THREE.IcosahedronGeometry(.03, 0), m.trim, x, .27, .12, g); }
-  mesh(new THREE.OctahedronGeometry(.06), m.accent, 0, -.05, .45, g); }
-function perfume(m, g, s) { mesh(cyl(.16 * s, .16 * s, .34 * s, 8), m.main, 0, .17 * s, 0, g); mesh(cyl(.04 * s, .05 * s, .08 * s, 6), m.trim, 0, .38 * s, 0, g); mesh(new THREE.OctahedronGeometry(.07 * s), m.trim, 0, .48 * s, 0, g); }
-function gear(m, g) { const d = mesh(cyl(.4, .4, .1, 16), m.main, 0, 0, 0, g); d.rotation.x = Math.PI / 2;
-  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const t = mesh(B(.14, .14, .1), m.main, Math.cos(a) * .45, Math.sin(a) * .45, 0, g); t.rotation.z = a; }
-  const ax = mesh(cyl(.08, .08, .16, 8), m.trim, 0, 0, 0, g); ax.rotation.x = Math.PI / 2; }
-function shield(m, g) { const shp = (k) => { const s = new THREE.Shape(); [[0, .5], [.38, .5], [.38, .05], [.2, -.3], [0, -.5], [-.2, -.3], [-.38, .05], [-.38, .5]].forEach((p, i) => i ? s.lineTo(p[0] * k, p[1] * k) : s.moveTo(p[0] * k, p[1] * k)); return s; };
-  mesh(new THREE.ExtrudeGeometry(shp(1), { depth: .08, bevelEnabled: false }), m.trim, 0, 0, 0, g);
-  mesh(new THREE.ExtrudeGeometry(shp(.62), { depth: .04, bevelEnabled: false }), m.main, 0, 0, .08, g);
-  mesh(new THREE.IcosahedronGeometry(.07, 0), m.trim, 0, 0, .14, g); }
-
-const RED3 = nm('F3_redwall', 0x5A2230, { roughness: 1 });
-const STRIP2 = nm('F2_strip', 0x2A8C9E, { roughness: 1, emissive: 0x000000 });
-function furnish(fid, y, g) {
-  const m = FM[fid], X = (x) => x * 2, Z = (z) => z < BZ + 1 ? z : z * 2, put = (geo, mm, x, yy, z) => mesh(geo, mm, X(x), y + yy, Z(z), g);
-  if (fid === 'RF') {
-    put(B(2.4, .1, 1), m.main, 1.8, .78, -1.7); put(B(2.44, .03, 1.04), m.trim, 1.8, .84, -1.7); [-1, 1].forEach(s => put(B(.1, .74, .9), m.main, 1.8 + s * 1.1, .37, -1.7)); 
-    put(B(.6, .12, .6), m.accent, 1.8, .48, -2.35); const bk = put(B(.6, .9, .1), m.accent, 1.8, .95, -2.62); bk.rotation.x = -.12;  
-    put(B(2.2, 2.3, .4), m.main, -3.0, 1.15, BZ + .2); [.5, 1.2, 1.9].forEach(h => put(B(2.1, .05, .36), m.trim, -3.0, h, BZ + .24)); 
-    put(new THREE.SphereGeometry(.28, 8, 6), m.trim, 3.6, 1.15, -.9); put(cyl(.12, .16, .9, 8), m.main, 3.6, .45, -.9); 
-    put(cyl(.025, .025, 1.6, 6), m.trim, 3.6, .8, 1.2); put(new THREE.ConeGeometry(.25, .3, 8, 1, true), m.light, 3.6, 1.7, 1.2);    
-    put(B(2.4, .02, 1.6), m.accent, -.6, .01, .4);   
-    const ic = new THREE.Group(); crown(m, ic); ic.position.set(X(1.8), y + 2.1, BZ + .05); g.add(ic);
-  } else if (fid === '3F') {
-    put(B(1.6, 2, .5), m.wall, -2.6, 1, BZ + .25); [.5, 1.05, 1.6].forEach(h => put(B(1.5, .05, .44), m.trim, -2.6, h, BZ + .3)); 
-    const big = new THREE.Group(); perfume(m, big, 1.4); big.position.set(X(-2.6), y + 1.08, BZ + .3); g.add(big);
-    put(cyl(.75, .75, .06, 12), m.accent, 1.2, .74, -.6); put(cyl(.08, .12, .7, 8), m.accent, 1.2, .36, -.6); 
-    [[-.5, .2], [.45, .25]].forEach(p => { const s = new THREE.Group(); perfume(m, s, .6); s.position.set(X(1.2) + p[0], y + .77, Z(-.6) + p[1] - .2); g.add(s); });
-    [[.1, .6], [2.3, .2]].forEach(p => put(cyl(.25, .25, .45, 10), m.main, p[0], .225, p[1])); 
-    put(B(1.4, 1, .05), m.wall, 2.6, 1.6, BZ + .05); [[2.2, m.main], [2.6, m.trim], [3.0, m.accent]].forEach(c => put(B(.3, .3, .03), c[1], c[0], 1.6, BZ + .1)); 
-    put(new THREE.SphereGeometry(.22, 8, 6), m.light, 1.2, 2.45, -.6); put(cyl(.01, .01, .55, 4), m.trim, 1.2, 2.82, -.6); 
-  } else if (fid === '2F') {
-    put(B(W - .6, .012, .28), STRIP2, 0, .006, .9);  
-    put(B(.08, .9, 2.4), m.wall, 0, .45, -1.4);   
-    put(B(1.8, .08, .8), m.wall, -2.6, .76, -1.5); put(B(1.84, .03, .84), m.main, -2.6, .81, -1.5); [-1, 1].forEach(s => put(B(.08, .72, .7), m.wall, -2.6 + s * .8, .36, -1.5)); 
-    const bp = put(B(.9, .05, .65), m.main, -3.5, 1.0, -.4); bp.rotation.x = -.9;  
-    [[-2.6, -.7], [2.6, -.7]].forEach(p => { put(B(.5, .08, .5), m.wall, p[0], .48, p[1]); put(B(.5, .55, .08), m.wall, p[0], .8, p[1] + .25); put(cyl(.04, .04, .44, 6), m.wall, p[0], .22, p[1]); }); 
-    put(B(1.8, .08, .8), m.wall, 2.6, .76, -1.5); [-1, 1].forEach(s => put(B(.08, .72, .7), m.wall, 2.6 + s * .8, .36, -1.5));
-    [1.6, 2.6, 3.6].forEach((x, k) => { put(B(.9, .6, .06), m.wall, x, 1.75, BZ + .05); 
-      [[-.3, .3, 1], [-.1, .4, 0], [.1, .25, 1], [.3, .35, k % 2]].forEach(c => { const mm = c[2] ? m.accent : m.trim; put(B(.07, c[1], .03), mm, x + c[0], 1.75, BZ + .1); put(B(.015, c[1] + .14, .02), mm, x + c[0], 1.75, BZ + .1); }); });
-    put(B(.7, 2.1, .6), m.wall, -1.2, 1.05, BZ + .3); [.6, 1.1, 1.6].forEach(h => put(B(.6, .04, .02), m.light, -1.2, h, BZ + .61)); 
-    put(B(1.8, .08, .8), m.wall, -1.6, .76, -1.5); [-1, 1].forEach(s => put(B(.08, .72, .7), m.wall, -1.6 + s * .8, .36, -1.5)); put(cyl(.25, .2, .5, 8), m.wall, 4.1, .25, 1.2); put(new THREE.IcosahedronGeometry(.4, 0), m.accent, 4.1, .85, 1.2); 
-    const ic = new THREE.Group(); gear(m, ic); ic.position.set(X(-4.4), y + 2.1, BZ + .1); g.add(ic);
-  } else if (fid === '1F') {
-    put(B(3, .02, 1.4), m.main, -3.0, .01, 2.1);   
-    put(B(3, 1, .7), m.wall, .6, .5, -1.4); put(B(3.02, .14, .72), m.trim, .6, .62, -1.4); 
-    put(B(2, .4, .8), m.main, 2.9, .2, .5); put(B(2, .5, .2), m.main, 2.9, .55, .15); [-1, 1].forEach(s => put(B(.2, .55, .8), m.main, 2.9 + s * 1.05, .28, .5)); 
-    put(cyl(.4, .4, .05, 10), m.trim, 2.9, .45, 1.5); put(cyl(.05, .05, .42, 6), m.trim, 2.9, .21, 1.5); 
-    put(cyl(.25, .2, .5, 8), m.main, 3.8, .25, -2.3); put(new THREE.IcosahedronGeometry(.4, 0), m.accent, 3.8, .85, -2.3); put(new THREE.IcosahedronGeometry(.3, 0), m.accent, 3.65, 1.3, -2.25); 
-    [-.4, .4].forEach(dx => put(B(.78, 2.2, .06), m.wall, -2.2 + dx, 1.1, BZ + .05)); put(B(1.8, .1, .1), m.trim, -2.2, 2.25, BZ + .05); [-1, 1].forEach(s => put(B(.1, 2.3, .1), m.trim, -2.2 + s * .85, 1.15, BZ + .05)); 
-    put(B(2, .4, .8), m.main, -1.6, .2, .9); put(B(2, .5, .2), m.main, -1.6, .55, .55); 
-    put(B(2.6, .02, 1.9), m.trim, 5.9, .01, 2.7); put(cyl(.45, .45, .05, 10), m.main, 5.9, .72, 2.7); put(cyl(.06, .06, .7, 6), m.main, 5.9, .35, 2.7); 
-    const ic = new THREE.Group(); shield(m, ic); ic.position.set(X(.6), y + 1.9, BZ + .05); g.add(ic);
-  }
-}
 const ICON1F = {"bell":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[0,0.06,0.26,0.06,0.2252,0.19,0,0.06,0.2252,0.19,0.13,0.2852,0,0.06,0.13,0.2852,0.0,0.32,0,0.06,0.0,0.32,-0.13,0.2852,0,0.06,-0.13,0.2852,-0.2252,0.19,0,0.06,-0.2252,0.19,-0.26,0.06,-0.26,0.06,-0.34,-0.18,0.34,-0.18,-0.26,0.06,0.34,-0.18,0.26,0.06,-0.38,-0.24,0.38,-0.24,0.38,-0.18,-0.38,-0.24,0.38,-0.18,-0.38,-0.18,0,-0.3,0.06,-0.3,0.03,-0.248,0,-0.3,0.03,-0.248,-0.03,-0.248,0,-0.3,-0.03,-0.248,-0.06,-0.3,0,-0.3,-0.06,-0.3,-0.03,-0.352,0,-0.3,-0.03,-0.352,0.03,-0.352,0,-0.3,0.03,-0.352,0.06,-0.3,-0.04,0.32,0.04,0.32,0.04,0.4,-0.04,0.32,0.04,0.4,-0.04,0.4]},"coffee":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[-0.24,0.1,-0.18,-0.22,0.18,-0.22,-0.24,0.1,0.18,-0.22,0.24,0.1,0.21,-0.12,0.21,-0.18,0.3019,-0.1419,0.21,-0.12,0.3019,-0.1419,0.2595,-0.0995,0.2595,-0.0995,0.3019,-0.1419,0.34,-0.05,0.2595,-0.0995,0.34,-0.05,0.28,-0.05,0.28,-0.05,0.34,-0.05,0.3019,0.0419,0.28,-0.05,0.3019,0.0419,0.2595,-0.0005,0.2595,-0.0005,0.3019,0.0419,0.21,0.08,0.2595,-0.0005,0.21,0.08,0.21,0.02,-0.32,-0.285,0.32,-0.285,0.32,-0.235,-0.32,-0.285,0.32,-0.235,-0.32,-0.235,-0.1425,0.135,-0.0975,0.135,-0.0575,0.245,-0.1425,0.135,-0.0575,0.245,-0.1025,0.245,-0.1025,0.245,-0.0575,0.245,-0.0975,0.355,-0.1025,0.245,-0.0975,0.355,-0.1425,0.355,-0.0225,0.135,0.0225,0.135,0.0625,0.245,-0.0225,0.135,0.0625,0.245,0.0175,0.245,0.0175,0.245,0.0625,0.245,0.0225,0.355,0.0175,0.245,0.0225,0.355,-0.0225,0.355,0.0975,0.135,0.1425,0.135,0.1825,0.245,0.0975,0.135,0.1825,0.245,0.1375,0.245,0.1375,0.245,0.1825,0.245,0.1425,0.355,0.1375,0.245,0.1425,0.355,0.0975,0.355]},"sofa":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[-0.28,-0.03,0.28,-0.03,0.28,0.23,-0.28,-0.03,0.28,0.23,-0.28,0.23,-0.28,-0.15,0.28,-0.15,0.28,-0.03,-0.28,-0.15,0.28,-0.03,-0.28,-0.03,-0.39,-0.17,-0.29,-0.17,-0.29,0.13,-0.39,-0.17,-0.29,0.13,-0.39,0.13,0.29,-0.17,0.39,-0.17,0.39,0.13,0.29,-0.17,0.39,0.13,0.29,0.13,-0.33,-0.25,-0.27,-0.25,-0.27,-0.17,-0.33,-0.25,-0.27,-0.17,-0.33,-0.17,0.27,-0.25,0.33,-0.25,0.33,-0.17,0.27,-0.25,0.33,-0.17,0.27,-0.17]},"elevator":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[-0.3,0.08,-0.04,0.08,-0.17,0.36,-0.22,-0.18,-0.12,-0.18,-0.12,0.08,-0.22,-0.18,-0.12,0.08,-0.22,0.08,0.04,-0.08,0.3,-0.08,0.17,-0.36,0.12,-0.08,0.22,-0.08,0.22,0.18,0.12,-0.08,0.22,0.18,0.12,0.18]},"members":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[-0.08,0.09,0.08,0.09,0.08,0.25,-0.08,0.09,0.08,0.25,-0.08,0.25,0,-0.2,0.2,-0.2,0.1414,-0.0586,0,-0.2,0.1414,-0.0586,0.0,0.0,0,-0.2,0.0,0.0,-0.1414,-0.0586,0,-0.2,-0.1414,-0.0586,-0.2,-0.2,-0.33,0.01,-0.21,0.01,-0.21,0.13,-0.33,0.01,-0.21,0.13,-0.33,0.13,-0.27,-0.2,-0.12,-0.2,-0.1639,-0.0939,-0.27,-0.2,-0.1639,-0.0939,-0.27,-0.05,-0.27,-0.2,-0.27,-0.05,-0.3761,-0.0939,-0.27,-0.2,-0.3761,-0.0939,-0.42,-0.2,0.21,0.01,0.33,0.01,0.33,0.13,0.21,0.01,0.33,0.13,0.21,0.13,0.27,-0.2,0.42,-0.2,0.3761,-0.0939,0.27,-0.2,0.3761,-0.0939,0.27,-0.05,0.27,-0.2,0.27,-0.05,0.1639,-0.0939,0.27,-0.2,0.1639,-0.0939,0.12,-0.2]},"footprints":{"disc":[0,0,0.66,0.0,0.5716,0.33,0,0,0.5716,0.33,0.33,0.5716,0,0,0.33,0.5716,0.0,0.66,0,0,0.0,0.66,-0.33,0.5716,0,0,-0.33,0.5716,-0.5716,0.33,0,0,-0.5716,0.33,-0.66,0.0,0,0,-0.66,0.0,-0.5716,-0.33,0,0,-0.5716,-0.33,-0.33,-0.5716,0,0,-0.33,-0.5716,-0.0,-0.66,0,0,-0.0,-0.66,0.33,-0.5716,0,0,0.33,-0.5716,0.5716,-0.33,0,0,0.5716,-0.33,0.66,-0.0],"frame":[0.66,0.0,0.75,0.0,0.6495,0.375,0.66,0.0,0.6495,0.375,0.5716,0.33,0.5716,0.33,0.6495,0.375,0.375,0.6495,0.5716,0.33,0.375,0.6495,0.33,0.5716,0.33,0.5716,0.375,0.6495,0.0,0.75,0.33,0.5716,0.0,0.75,0.0,0.66,0.0,0.66,0.0,0.75,-0.375,0.6495,0.0,0.66,-0.375,0.6495,-0.33,0.5716,-0.33,0.5716,-0.375,0.6495,-0.6495,0.375,-0.33,0.5716,-0.6495,0.375,-0.5716,0.33,-0.5716,0.33,-0.6495,0.375,-0.75,0.0,-0.5716,0.33,-0.75,0.0,-0.66,0.0,-0.66,0.0,-0.75,0.0,-0.6495,-0.375,-0.66,0.0,-0.6495,-0.375,-0.5716,-0.33,-0.5716,-0.33,-0.6495,-0.375,-0.375,-0.6495,-0.5716,-0.33,-0.375,-0.6495,-0.33,-0.5716,-0.33,-0.5716,-0.375,-0.6495,-0.0,-0.75,-0.33,-0.5716,-0.0,-0.75,-0.0,-0.66,-0.0,-0.66,-0.0,-0.75,0.375,-0.6495,-0.0,-0.66,0.375,-0.6495,0.33,-0.5716,0.33,-0.5716,0.375,-0.6495,0.6495,-0.375,0.33,-0.5716,0.6495,-0.375,0.5716,-0.33,0.5716,-0.33,0.6495,-0.375,0.75,-0.0,0.5716,-0.33,0.75,-0.0,0.66,-0.0],"glyph":[-0.13,0.06,-0.03,0.06,-0.08,0.2072,-0.13,0.06,-0.08,0.2072,-0.18,0.2072,-0.13,0.06,-0.18,0.2072,-0.23,0.06,-0.13,0.06,-0.23,0.06,-0.18,-0.0872,-0.13,0.06,-0.18,-0.0872,-0.08,-0.0872,-0.13,0.06,-0.08,-0.0872,-0.03,0.06,-0.19,-0.29,-0.07,-0.29,-0.07,-0.19,-0.19,-0.29,-0.07,-0.19,-0.19,-0.19,0.13,0.14,0.23,0.14,0.18,0.2872,0.13,0.14,0.18,0.2872,0.08,0.2872,0.13,0.14,0.08,0.2872,0.03,0.14,0.13,0.14,0.03,0.14,0.08,-0.0072,0.13,0.14,0.08,-0.0072,0.18,-0.0072,0.13,0.14,0.18,-0.0072,0.23,0.14,0.07,-0.21,0.19,-0.21,0.19,-0.11,0.07,-0.21,0.19,-0.11,0.07,-0.11]}};
 
 const LOBBY = {
@@ -142,9 +87,9 @@ const LOBBY = {
 };
 
 const COFFEE = { enabled: false, cooldown: 600, last: {}, canGo(k, now) { return this.enabled && (now - (this.last[k] || -1e9)) >= this.cooldown; }, start() { return false; } };
-const L1 = { wall: nm('F1_wall_dark', 0x4A3C36), floor: nm('F1_floor_stone', 0xCDBFA8), main: nm('F1_main', 0x1C1A1C), gold: nm('F1_gold', 0xC9A24E, GOLD), 
-  wine: nm('F1_wine_wall', 0x6E2A3A), carpet: nm('F1_carpet', 0x0E0C0E, { roughness: 1 }), green: nm('F1_plant', 0x547A5C), seat: nm('F1_seat', 0x3A2F31), shade: nm('F1_shade', 0xFFF1DC, LAMP(0xFFF1DC)) };
-const ICM = { disc: new THREE.MeshBasicMaterial({ color: 0x141414, name: 'ICON_disc' }), frame: new THREE.MeshBasicMaterial({ color: 0xD4A944, name: 'ICON_frame' }), glyph: new THREE.MeshBasicMaterial({ color: 0xEBC65E, name: 'ICON_glyph' }) };
+const L1 = { wall: nm('F1_wall_dark', 0xEEF2F6), floor: nm('F1_floor_stone', 0xE9EDF2), main: nm('F1_main', 0x2F6FB3), gold: nm('F1_gold', 0xF08A24), 
+  wine: nm('F1_wine_wall', 0x4A8FD0), carpet: nm('F1_carpet', 0x1F5A96, { roughness: 1 }), green: nm('F1_plant', 0x547A5C), seat: nm('F1_seat', 0x6FA6DA), shade: nm('F1_shade', 0xFFF1DC, LAMP(0xFFF1DC)) };
+const ICM = { disc: new THREE.MeshBasicMaterial({ color: 0x2F6FB3, name: 'ICON_disc' }), frame: new THREE.MeshBasicMaterial({ color: 0xF08A24, name: 'ICON_frame' }), glyph: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, name: 'ICON_glyph' }) };
 const ICZ = { disc: 0, frame: .03, glyph: .06 }; 
 function iconGeo(name, layer) { const a = ICON1F[name][layer], p = [];
   for (let i = 0; i < a.length; i += 6) { let [x1, y1, x2, y2, x3, y3] = a.slice(i, i + 6); if ((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1) < 0) { [x2, x3] = [x3, x2]; [y2, y3] = [y3, y2]; } 
@@ -221,29 +166,29 @@ function mergeStatic(root, shallow) {
   byMat.forEach(v => { const geo = mergeGeometries(v.list, false); if (!geo) return; const me = new THREE.Mesh(geo, v.m); me.castShadow = true; me.receiveShadow = true; me.renderOrder = v.ro; me.name = 'merged_' + (v.m.name || ''); root.add(me); });
 }
 
-const WINE = nm('SIGN_wine', 0x4A1418); 
+const WINE = nm('SIGN_wine', 0x2F6FB3); 
 function build(floors) {
   while (world.children.length) world.remove(world.children[0]); floorPick.length = 0; topFloorY = null; Object.keys(LOCKED).forEach(k => delete LOCKED[k]);
   const list = floors.slice().reverse(); const n = list.length; const H = FH1 + (n - 1) * FH; const W0 = W, D0 = D, FH0 = FH;
-  mesh(B(60, .2, 40), mat(0x15111c), 0, -.1, 0, world, false);
-  mesh(B(W + 2, .25, D + 2.5), mat(0x2b2230), 0, .02, .8, world, false);
+  mesh(B(60, .2, 40), mat(0x5E6B7A), 0, -.1, 0, world, false);
+  mesh(B(W + 2, .25, D + 2.5), mat(0xC9D2DC), 0, .02, .8, world, false);
   list.forEach((f, i) => {
     const fid = FM[f.floor_id] ? f.floor_id : '1F', m = FM[fid], st = STYLE[fid], y = i ? FH1 + (i - 1) * FH0 : 0; const W = i ? W0 : W1, D = i ? D0 : D1, FH = i ? FH0 : FH1; floorY[f.floor_id] = y; LOCKED[f.floor_id] = !!f.locked;
     mesh(B(W, T, D), SH.cut, 0, y + T / 2, 0, world);                                   
     mesh(B(W - .5, .02, D - .4), m.floor, 0, y + T + .01, 0, world, false);              
     mesh(B(W + .02, .04, .04), SH.trim, 0, y + T, D / 2 + .01, world, false);           
     mesh(B(W - .4, FH - T, .2), m.wall, 0, y + T + (FH - T) / 2, -D / 2 + .1, world);    
-    [-1, 1].forEach(s => { mesh(B(.2, FH, D), SH.main, s * (W / 2 - .1), y + FH / 2, 0, world); mesh(B(.04, FH - T, D - .4), m.wall, s * (W / 2 - .22), y + T + (FH - T) / 2, 0, world, false); });
-    if (fid === '3F') mesh(B(.04, FH - T - .6, 3.2), RED3, -(W / 2 - .25), y + T + (FH - T - .6) / 2, -3.6, world, false); 
+    [-1, 1].forEach(s => { mesh(B(.04, FH - T, D - .3), GLASS, s * (W / 2 - .05), y + T + (FH - T) / 2, 0, world, false); for (let k = -2; k <= 2; k++) mesh(B(.04, FH - .2, .04), SH.main, s * (W / 2 - .02), y + FH / 2, k * (D / 4.4), world, false); });
+    if (0) mesh(B(.04, FH - T - .6, 3.2), RED3, -(W / 2 - .25), y + T + (FH - T - .6) / 2, -3.6, world, false); 
     if (fid === 'RF' || fid === '1F') mesh(B(W - .5, .1, .03), m.trim, 0, y + T + .05, BZ + .02, world, false);   
-    const g = new THREE.Group(); g.name = 'F' + st.label.replace('F', '') + '_furniture'; world.add(g); furnGroups[f.floor_id] = g; if (!f.locked) { if (fid === '1F') lobby1F(y + T, g, m); else furnish(fid, y + T, g); buildExtras(f.floor_id, y + T, g, m); mergeStatic(g); } else mesh(B(W - .3, FH - T - .04, D - .3), FROST, 0, y + T + (FH - T) / 2, 0, world, false); 
+    const g = new THREE.Group(); g.name = 'F' + st.label.replace('F', '') + '_furniture'; world.add(g); furnGroups[f.floor_id] = g; if (!f.locked) { if (fid === '1F') lobby1F(y + T, g, m); else OFFICE_FLOORS.push(y + T); buildExtras(f.floor_id, y + T, g, m); mergeStatic(g); } else mesh(B(W - .3, FH - T - .04, D - .3), FROST, 0, y + T + (FH - T) / 2, 0, world, false); 
     
     { const lite = matchMedia('(pointer: coarse)').matches || innerWidth < 760; 
       const WL = [[-(W / 2 - 2.2), 0], [W / 2 - 2.2, 0], [0, BZ + 2.2], [0, D / 2 - 2.2]].filter((p, j) => !lite || j < 2);
       WL.forEach(p => { const Lw = new THREE.PointLight(st.light, (lite ? 9 : 6) * (fid === '1F' ? 1.1 : 1), fid === '1F' ? 26 : 18, 1.2); Lw.position.set(p[0], y + FH - .9, p[1]); Lw.name = fid + '_wallLight'; world.add(Lw); }); }
     
-    mesh(new THREE.PlaneGeometry(W - .5, FH - .2), new THREE.MeshStandardMaterial({ color: 0x9fb6d8, transparent: true, opacity: .06, roughness: .2, depthWrite: false }), 0, y + FH / 2, D / 2, world, false);
-    for (let k = -2; k <= 2; k++) if (i || k) mesh(B(.04, FH - .2, .04), SH.trim, k * (W / 4.2), y + FH / 2, D / 2 + .01, world, false);
+    mesh(new THREE.PlaneGeometry(W - .5, FH - .2), GLASS, 0, y + FH / 2, D / 2, world, false);
+    for (let k = -4; k <= 4; k++) if (i || Math.abs(k) > 1) mesh(B(.04, FH - .2, .04), SH.main, k * (W / 8.4), y + FH / 2, D / 2 + .01, world, false);
     const pick = mesh(B(W, FH, D), new THREE.MeshBasicMaterial({ visible: false }), 0, y + FH / 2, 0, world, false); pick.userData.fid = f.floor_id; floorPick.push(pick);
     if (f.floor_id === 'RF' && !f.locked) topFloorY = y + T;
     if (i === 0) {
@@ -278,26 +223,36 @@ const moon = new THREE.DirectionalLight(0xbfc8ff, .9); moon.position.set(-12, 30
 moon.shadow.mapSize.set(2048, 2048); moon.shadow.radius = 4; Object.assign(moon.shadow.camera, { left: -24, right: 24, top: 30, bottom: -6, near: 1, far: 80 }); moon.shadow.bias = -.0005; scene.add(moon);
 function doorSync(fid) { const L = DOORS[fid], im = L && L.im; if (!im) return; L.forEach((D0, j) => D0.pan.forEach((p, i) => { p.updateMatrix(); im.setMatrixAt(j * 2 + i, p.matrix); })); im.instanceMatrix.needsUpdate = true; }
 const ELEV_X = W / 2 - .75, ELEV_Z = 0, ELEV_GLASS = new THREE.MeshStandardMaterial({ color: 0x9fb6d8, transparent: true, opacity: .16, roughness: .2, depthWrite: false });
-const DOORS = {};
+const DOORS = {}, DOORM = mat(0xBFD9F2);
 function buildExtras(fid, y, g, m) {
   DOORS[fid] = [-1, 1].map(s => { const x = s * ELEV_X, h = (fid === '1F' ? FH1 : FH) - T - .25;
     const sh = new THREE.Mesh(B(.95, h, .95), ELEV_GLASS); sh.position.set(x, y + h / 2, ELEV_Z); sh.renderOrder = 2; g.add(sh);
     const fr = new THREE.Mesh(B(1.0, .06, .06), m.trim); fr.position.set(x, y + 2.3, ELEV_Z + .5); g.add(fr);
     const pan = [-1, 1].map(d => { const p = new THREE.Object3D(); p.position.set(x + d * .21, y + 1.12, ELEV_Z + .49); g.add(p); return p; });
     return { pan, x }; });
-  const im = new THREE.InstancedMesh(B(.42, 2.2, .04), m.trim, 4); im.userData.dyn = 1; g.add(im); DOORS[fid].im = im; doorSync(fid);
+  const im = new THREE.InstancedMesh(B(.42, 2.2, .04), DOORM, 4); im.userData.dyn = 1; g.add(im); DOORS[fid].im = im; doorSync(fid);
 }
 
 const target = new THREE.Vector3(), camPos = new THREE.Vector3(); let tweenT = 1; const from = { p: new THREE.Vector3(), t: new THREE.Vector3() };
 let towerH = 4 * FH;
-function camHome(H) { towerH = H; const a = innerWidth / Math.max(1, innerHeight); setCam(new THREE.Vector3(0, (H + 4) / 2, 0), a < 1 ? 82 / a : 88 + (innerWidth < 860 ? 30 : 0), true); }
-function setCam(t, dist, now) { from.p.copy(camera.position); from.t.copy(controls.target); target.copy(t); camPos.set(t.x + dist * .12, t.y + dist * .05, t.z + dist); tweenT = now ? 1 : 0; if (now) { camera.position.copy(camPos); controls.target.copy(target); } }
+function camHome(H) { towerH = H; const a = innerWidth / Math.max(1, innerHeight), tv = Math.tan(camera.fov * Math.PI / 360), th = tv * a; const dist = Math.max((H + 6) / 2 / tv, (W1 / 2 + 2) / th) + D1 / 2; setCam(new THREE.Vector3(0, (H + 4) / 2, 0), dist, true, a < 1); }
+function setCam(t, dist, now, straight) { from.p.copy(camera.position); from.t.copy(controls.target); target.copy(t); camPos.set(straight ? 0 : t.x + dist * .12, t.y + dist * .05, t.z + dist); tweenT = now ? 1 : 0; if (now) { camera.position.copy(camPos); controls.target.copy(target); } }
+controls.maxDistance = 260; camera.far = 700; camera.updateProjectionMatrix();
 build([{ floor_id: 'RF' }, { floor_id: '3F' }, { floor_id: '2F' }, { floor_id: '1F' }]);
+{ const OM = { desk: mat(0xFFFFFF), edge: mat(0xF08A24), chair: mat(0xF08A24), screen: mat(0x5A6B7D), pot: mat(0xF4F6F9), leaf: mat(0x5E9E6A), table: mat(0xF4F6F9) };
+  const U = (parts) => mergeGeometries(parts.map(q => { const gg = q[0].index ? q[0].toNonIndexed() : q[0].clone(); gg.deleteAttribute('uv'); gg.deleteAttribute('normal'); gg.translate(q[1], q[2], q[3]); gg.computeVertexNormals(); return gg; }));
+  const deskG = U([[B(1.6, .76, .8), 0, .38, 0]]), edgeG = B(1.6, .04, .02), chairG = U([[B(.5, .5, .5), 0, .25, 0], [B(.5, .5, .08), 0, .75, .21]]), scrG = B(.6, .36, .04);
+  const tableG = U([[B(4.2, .06, 1.6), 0, .74, 0], [B(2.8, .72, .3), 0, .36, 0]]), potG = cyl(.3, .24, .55, 6), leafG = new THREE.OctahedronGeometry(.5, 0);
+  const L = { desk: [], edge: [], chair: [], scr: [], table: [], pot: [], leaf: [] };
+  OFFICE_FLOORS.forEach(y => { [-10.5, -7.5, -4.5].forEach(x => [-5.5, -2.2, 1.1].forEach(z => { L.desk.push([x, y, z, 0]); L.chair.push([x, y, z + .8, 0]); }));
+    L.table.push([7, y, -2, 0]); [[-1.4, -1.1, 0], [0, -1.1, 0], [1.4, -1.1, 0], [-1.4, 1.1, Math.PI], [0, 1.1, Math.PI], [1.4, 1.1, Math.PI]].forEach(c => L.chair.push([7 + c[0], y, -2 + c[1], c[2] === 0 ? Math.PI : 0]));
+    [[-13, -7.5], [12.5, -7.5], [-13, 7.5], [12.5, 7.5]].forEach(p => { L.pot.push([p[0], y + .27, p[1], 0]); L.leaf.push([p[0], y + .95, p[1], 0]); }); });
+  const o = new THREE.Object3D(); [[deskG, OM.desk, L.desk], [chairG, OM.chair, L.chair], [tableG, OM.table, L.table], [potG, OM.pot, L.pot], [leafG, OM.leaf, L.leaf]].forEach(([g, m, list]) => { const im = new THREE.InstancedMesh(g, m, list.length); list.forEach((p, i) => { o.position.set(p[0], p[1], p[2]); o.rotation.set(0, p[3], 0); o.updateMatrix(); im.setMatrixAt(i, o.matrix); }); im.castShadow = true; im.receiveShadow = true; world.add(im); }); }
 
 const PEOPLE = [], NP = 8, SKIN = [0x8A8A8A, 0x9A968F, 0x7B7F84, 0xA3A3A3, 0x8E8A84, 0x6F7378, 0x989C9F, 0x85817B];
 const PART = { torso: [B(.5, .62, .3), .95], head: [B(.36, .36, .36), 1.48], leg: [B(.2, .62, .22), .31], arm: [B(.15, .58, .17), .96] };
 const IM = {}; ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => { const p = PART[k.replace(/[LR]$/, '')]; const im = new THREE.InstancedMesh(p[0], new THREE.MeshStandardMaterial({ roughness: .9, flatShading: true }), NP); im.castShadow = true; im.frustumCulled = false; IM[k] = im; scene.add(im); });
-const AREA = { '1F': { x: [-12.5, 12.5], z: [-3.5, 8.5] }, up: { x: [-6.8, 6.8], z: [-3.6, 4.6] } };
+const AREA = { '1F': { x: [-12.5, 12.5], z: [-3.5, 8.5] }, up: { x: [-12, 12], z: [3, 8] } };
 const rnd = (a, b) => a + Math.random() * (b - a);
 const FL = ['1F', '1F', '1F', '1F', '1F', '2F', '3F', 'RF'];
 function pick(p) { const A = p.fid === '1F' ? AREA['1F'] : AREA.up; return [rnd(A.x[0], A.x[1]), rnd(A.z[0], A.z[1])]; }
@@ -331,7 +286,7 @@ function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(),
   controls.update(); composer.render(); }
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
-if (SHOT === 'lobby') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; target.set(0, y + 2.2, 0); camPos.set(1.5, y + 3.2, 24); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'lobby') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; target.set(0, y + 2.8, 0); camPos.set(1.5, y + 3.8, 26); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'info') info.style.display = 'block';
 document.title = 'STATS=' + JSON.stringify(stats());
 loop();
