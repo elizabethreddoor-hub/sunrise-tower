@@ -11,6 +11,8 @@ js=re.sub(r'/\*.*?\*/','',js)
 js=re.sub(r'(?<![:\'"])//[^\n]*','',js)  # drop comments (they carry internal names)
 js=js.replace("red: 0x8C040C, ","")
 extras='''
+function XT(w, h, tri) { const mk = () => { if (!tri) return new THREE.PlaneGeometry(w, h); const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([-w / 2, -h / 2, 0, w / 2, -h / 2, 0, 0, h / 2, 0], 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, .5, 1], 2)); g.computeVertexNormals(); return g; }; const a = mk(), b = mk(); b.rotateY(Math.PI / 2); return mergeGeometries([a, b]); }
+const _DS = new Map(); function DS(m) { if (!_DS.has(m)) { const c = m.clone(); c.side = THREE.DoubleSide; _DS.set(m, c); } return _DS.get(m); }
 const ELEV_X = W / 2 - .75, ELEV_Z = 0, ELEV_GLASS = new THREE.MeshStandardMaterial({ color: 0x9fb6d8, transparent: true, opacity: .16, roughness: .2, depthWrite: false });
 const DOORS = {}, DOORM = mat(0xBFD9F2);
 function buildExtras(fid, y, g, m) {

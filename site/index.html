@@ -123,7 +123,7 @@ function lobby1F(y, g, m) { const BZ1 = -D1 / 2 + .2, P = (geo, mm, x, yy, z) =>
   
   const CH = [[-2.4, 5.1, 0], [2.4, 5.1, 0], [-2.4, 1.2, 0], [2.4, 1.2, 0], [-2.4, -3.2, .5], [2.4, -3.2, .5]]; 
   inst(cyl(.02, .02, 1.2, 4), L1.gold, CH.map(c => [c[0], y + FH1 - T - .6 + c[2] / 2, c[1]]), g); inst(new THREE.ConeGeometry(.9, .6, 8, 1, true), L1.shade, CH.map(c => [c[0], y + FH1 - T - 1.35 + c[2], c[1]]), g, 0, 1);
-  inst(new THREE.SphereGeometry(.32, 6, 4), m.light, CH.map(c => [c[0], y + FH1 - T - 1.55 + c[2], c[1]]), g);
+  inst(new THREE.OctahedronGeometry(.32, 0), m.light, CH.map(c => [c[0], y + FH1 - T - 1.55 + c[2], c[1]]), g);
   
   [-1, 1].forEach(s => { const x = s * ELEV_X; P(B(1.7, FH1 - T - 2.45, .3), L1.main, x, 2.45 + (FH1 - T - 2.45) / 2, ELEV_Z + .62); P(B(1.74, .06, .32), L1.gold, x, 2.45, ELEV_Z + .62);
     [-1, 1].forEach(d => P(B(.08, FH1 - T, .32), L1.gold, x + d * .85, (FH1 - T) / 2, ELEV_Z + .62)); placeIcon('elevator', g, x, y + 3.6, ELEV_Z + .78); });
@@ -152,7 +152,7 @@ function lobby1F(y, g, m) { const BZ1 = -D1 / 2 + .2, P = (geo, mm, x, yy, z) =>
   placeIcon('sofa', g, -XW + .04, y + 2.8, 5.7, Math.PI / 2); placeIcon('members', g, XW - .04, y + 2.8, 5.7, -Math.PI / 2);
   
   const PL = [[-13.8, 9], [13.8, 9], [-13.8, -9], [-7.4, -9]];
-  inst(cyl(.35, .28, .7, 8), L1.main, PL.map(p => [p[0], y + .35, p[1]]), g); inst(new THREE.IcosahedronGeometry(.6, 0), L1.green, PL.map(p => [p[0], y + 1.2, p[1]]), g);
+  inst(XT(.65, .7), DS(L1.main), PL.map(p => [p[0], y + .35, p[1]]), g); inst(XT(1.3, 1.6, 1), DS(L1.green), PL.map(p => [p[0], y + 1.5, p[1]]), g);
 }
 
 function mergeStatic(root, shallow) {
@@ -208,7 +208,7 @@ function build(floors) {
   mesh(B(W1 + .3, .06, .06), SH.trim, 0, .06, D1 / 2 + .14, world, false);
   [[0, D1 / 2 + .18, W1 + .4, .05], [0, -D1 / 2 - .18, W1 + .4, .05], [W1 / 2 + .18, 0, .05, D1 + .4], [-W1 / 2 - .18, 0, .05, D1 + .4]].forEach(e => mesh(B(e[2], .05, e[3]), L1.gold, e[0], FH1 + .1, e[1], world, false)); 
   { const FZ = D1 / 2 + 1.6, U = (parts) => mergeGeometries(parts.map(q => { const gg = q[0].index ? q[0].toNonIndexed() : q[0]; ['uv'].forEach(a => gg.deleteAttribute(a)); gg.translate(q[1], q[2], q[3]); return gg; })); 
-    const unit = [[U([[cyl(.06, .08, 3, 6), 3.2, 1.5, 0], [B(.8, .55, .8), 2.0, .28, -.2]]), SH.main], [U([[B(.36, .08, .36), 3.2, 3.0, 0], [B(.86, .05, .86), 2.0, .57, -.2]]), L1.gold], [U([[new THREE.IcosahedronGeometry(.2, 0), 3.2, 3.22, 0]]), FM['1F'].light], [U([[new THREE.IcosahedronGeometry(.42, 0), 2.0, .95, -.2]]), L1.green]];
+    const unit = [[U([[cyl(.06, .08, 3, 6), 3.2, 1.5, 0], [B(.8, .55, .8), 2.0, .28, -.2]]), SH.main], [U([[B(.36, .08, .36), 3.2, 3.0, 0], [B(.86, .05, .86), 2.0, .57, -.2]]), L1.gold], [U([[new THREE.IcosahedronGeometry(.2, 0), 3.2, 3.22, 0]]), FM['1F'].light], [U([[XT(.9, 1.1, 1), 2.0, 1.05, -.2]]), DS(L1.green)]];
     unit.forEach(([geo, mm]) => { const im = new THREE.InstancedMesh(geo, mm, 2), o = new THREE.Object3D(); [1, -1].forEach((sx, i) => { o.position.set(0, 0, FZ); o.scale.set(sx, 1, 1); o.updateMatrix(); im.setMatrixAt(i, o.matrix); }); im.castShadow = true; world.add(im); }); } 
   let y = H, w = W + .3, d = D + .3; [[.9, 1.0], [.72, .9], [.52, .8]].forEach((s) => {
     const hh = s[1]; mesh(B(w * s[0], hh, d * s[0]), SH.main, 0, y + hh / 2, 0, world); mesh(B(w * s[0] + .06, .06, d * s[0] + .06), SH.trim, 0, y + hh, 0, world, false);
@@ -223,6 +223,8 @@ scene.add(new THREE.HemisphereLight(0xc8c6d8, 0x3a3230, .85));
 const moon = new THREE.DirectionalLight(0xbfc8ff, .9); moon.position.set(-12, 30, 22); moon.castShadow = true;
 moon.shadow.mapSize.set(2048, 2048); moon.shadow.radius = 4; Object.assign(moon.shadow.camera, { left: -24, right: 24, top: 30, bottom: -6, near: 1, far: 80 }); moon.shadow.bias = -.0005; scene.add(moon);
 function doorSync(fid) { const L = DOORS[fid], im = L && L.im; if (!im) return; L.forEach((D0, j) => D0.pan.forEach((p, i) => { p.updateMatrix(); im.setMatrixAt(j * 2 + i, p.matrix); })); im.instanceMatrix.needsUpdate = true; }
+function XT(w, h, tri) { const mk = () => { if (!tri) return new THREE.PlaneGeometry(w, h); const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([-w / 2, -h / 2, 0, w / 2, -h / 2, 0, 0, h / 2, 0], 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, .5, 1], 2)); g.computeVertexNormals(); return g; }; const a = mk(), b = mk(); b.rotateY(Math.PI / 2); return mergeGeometries([a, b]); }
+const _DS = new Map(); function DS(m) { if (!_DS.has(m)) { const c = m.clone(); c.side = THREE.DoubleSide; _DS.set(m, c); } return _DS.get(m); }
 const ELEV_X = W / 2 - .75, ELEV_Z = 0, ELEV_GLASS = new THREE.MeshStandardMaterial({ color: 0x9fb6d8, transparent: true, opacity: .16, roughness: .2, depthWrite: false });
 const DOORS = {}, DOORM = mat(0xBFD9F2);
 function buildExtras(fid, y, g, m) {
@@ -240,14 +242,14 @@ function camHome(H) { towerH = H; const a = innerWidth / Math.max(1, innerHeight
 function setCam(t, dist, now, straight) { from.p.copy(camera.position); from.t.copy(controls.target); target.copy(t); camPos.set(straight ? 0 : t.x + dist * .12, t.y + dist * .05, t.z + dist); tweenT = now ? 1 : 0; if (now) { camera.position.copy(camPos); controls.target.copy(target); } }
 controls.maxDistance = 260; camera.far = 700; camera.updateProjectionMatrix();
 build([{ floor_id: 'RF' }, { floor_id: '3F' }, { floor_id: '2F' }, { floor_id: '1F' }]);
-{ const OM = { desk: mat(0xFFFFFF), edge: mat(0xF08A24), chair: mat(0xF08A24), screen: mat(0x5A6B7D), pot: mat(0xF4F6F9), leaf: mat(0x5E9E6A), table: mat(0xF4F6F9) };
+{ const OM = { desk: mat(0xFFFFFF), edge: mat(0xF08A24), chair: DS(mat(0xF08A24)), screen: mat(0x5A6B7D), pot: DS(mat(0xF4F6F9)), leaf: DS(mat(0x5E9E6A)), table: mat(0xF4F6F9) };
   const U = (parts) => mergeGeometries(parts.map(q => { const gg = q[0].index ? q[0].toNonIndexed() : q[0].clone(); gg.deleteAttribute('uv'); gg.deleteAttribute('normal'); gg.translate(q[1], q[2], q[3]); gg.computeVertexNormals(); return gg; }));
-  const deskG = U([[B(1.6, .76, .8), 0, .38, 0]]), edgeG = B(1.6, .04, .02), chairG = U([[B(.5, .5, .5), 0, .25, 0], [B(.5, .5, .08), 0, .75, .21]]), scrG = B(.6, .36, .04);
-  const tableG = U([[B(4.2, .06, 1.6), 0, .74, 0], [B(2.8, .72, .3), 0, .36, 0]]), potG = B(.5, .55, .5), leafG = new THREE.OctahedronGeometry(.5, 0);
+  const deskG = U([[B(1.6, .76, .8), 0, .38, 0]]), edgeG = B(1.6, .04, .02), chairG = U([[new THREE.PlaneGeometry(.5, .5).rotateX(-Math.PI / 2), 0, .5, 0], [new THREE.PlaneGeometry(.5, .5), 0, .75, .25]]), scrG = B(.6, .36, .04);
+  const tableG = U([[B(4.2, .06, 1.6), 0, .74, 0], [B(2.8, .72, .3), 0, .36, 0]]), potG = XT(.5, .55), leafG = XT(1, 1.3, 1);
   const L = { desk: [], edge: [], chair: [], scr: [], table: [], pot: [], leaf: [] };
   OFFICE_FLOORS.forEach(y => { [-10.5, -7.5, -4.5].forEach(x => [-5.5, -2.2, 1.1].forEach(z => { L.desk.push([x, y, z, 0]); L.chair.push([x, y, z - .8, Math.PI]); }));
-    L.table.push([7, y, -2, 0]); [[-1, -1.1, 0], [1, -1.1, 0], [-1, 1.1, Math.PI], [1, 1.1, Math.PI]].forEach(c => L.chair.push([7 + c[0], y, -2 + c[1], c[2] === 0 ? Math.PI : 0]));
-    [[-13, -7.5], [12.5, -7.5], [-13, 7.5], [12.5, 7.5]].forEach(p => { L.pot.push([p[0], y + .27, p[1], 0]); L.leaf.push([p[0], y + .95, p[1], 0]); }); });
+    L.table.push([7, y, -2, 0]); [[-1.4, -1.1, 0], [0, -1.1, 0], [1.4, -1.1, 0], [-1.4, 1.1, Math.PI], [0, 1.1, Math.PI], [1.4, 1.1, Math.PI]].forEach(c => L.chair.push([7 + c[0], y, -2 + c[1], c[2] === 0 ? Math.PI : 0]));
+    [[-13, -7.5], [12.5, -7.5], [-13, 7.5], [12.5, 7.5]].forEach(p => { L.pot.push([p[0], y + .27, p[1], 0]); L.leaf.push([p[0], y + 1.2, p[1], .785]); }); });
   const o = new THREE.Object3D(); [[deskG, OM.desk, L.desk], [chairG, OM.chair, L.chair], [tableG, OM.table, L.table], [potG, OM.pot, L.pot], [leafG, OM.leaf, L.leaf]].forEach(([g, m, list]) => { const im = new THREE.InstancedMesh(g, m, list.length); list.forEach((p, i) => { o.position.set(p[0], p[1], p[2]); o.rotation.set(0, p[3], 0); o.updateMatrix(); im.setMatrixAt(i, o.matrix); }); im.castShadow = true; im.receiveShadow = true; world.add(im); }); }
 
 const DESK_X = [-10.5, -7.5, -4.5], DESK_Z = [-5.5, -2.2, 1.1], deskPos = k => [DESK_X[Math.floor(k / 3) % 3], DESK_Z[k % 3]];

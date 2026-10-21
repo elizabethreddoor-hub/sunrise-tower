@@ -38,3 +38,9 @@ rep("for (let k = -2; k <= 2; k++) if (i || k) mesh(B(.04, FH - .2, .04), SH.tri
 rep("SH.main, k * (W / 4.2),","SH.main, k * (W / 8.4),")
 rep("else furnish(fid, y + T, g);","else OFFICE_FLOORS.push(y + T);")
 rep("const W1 = 30,","const OFFICE_FLOORS = []; const W1 = 30,")
+
+# minimal-face props: crossed planes for greenery/pots, low-poly lamps
+rep("inst(cyl(.35, .28, .7, 8), L1.main, PL.map(p => [p[0], y + .35, p[1]]), g); inst(new THREE.IcosahedronGeometry(.6, 0), L1.green,","inst(XT(.65, .7), DS(L1.main), PL.map(p => [p[0], y + .35, p[1]]), g); inst(XT(1.3, 1.6, 1), DS(L1.green),")
+rep("[U([[new THREE.IcosahedronGeometry(.42, 0), 2.0, .95, -.2]]), L1.green]","[U([[XT(.9, 1.1, 1), 2.0, 1.05, -.2]]), DS(L1.green)]")
+rep("new THREE.SphereGeometry(.32, 6, 4)","new THREE.OctahedronGeometry(.32, 0)")
+rep("DS(L1.green), PL.map(p => [p[0], y + 1.2, p[1]])","DS(L1.green), PL.map(p => [p[0], y + 1.5, p[1]])")
