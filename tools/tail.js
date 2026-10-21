@@ -3,7 +3,7 @@ const target = new THREE.Vector3(), camPos = new THREE.Vector3(); let tweenT = 1
 let towerH = 4 * FH;
 function camHome(H) { towerH = H; const a = innerWidth / Math.max(1, innerHeight), tv = Math.tan(camera.fov * Math.PI / 360), th = tv * a; const dist = Math.max((H + 6) / 2 / tv, (W1 / 2 + 2) / th) + D1 / 2; setCam(new THREE.Vector3(0, (H + 4) / 2, 0), dist, true, a < 1); }
 function setCam(t, dist, now, straight) { from.p.copy(camera.position); from.t.copy(controls.target); target.copy(t); camPos.set(straight ? 0 : t.x + dist * .12, t.y + dist * .05, t.z + dist); tweenT = now ? 1 : 0; if (now) { camera.position.copy(camPos); controls.target.copy(target); } }
-controls.maxDistance = 260; camera.far = 700; camera.updateProjectionMatrix();
+controls.maxDistance = 260; camera.far = 1600; controls.maxPolarAngle = 1.55; camera.updateProjectionMatrix();
 build([{ floor_id: 'RF' }, { floor_id: '3F' }, { floor_id: '2F' }, { floor_id: '1F' }]);
 { const OM = { desk: mat(0xFFFFFF), edge: mat(0xF08A24), chair: DS(mat(0xF08A24)), screen: mat(0x5A6B7D), pot: DS(mat(0xF4F6F9)), leaf: DS(mat(0x5E9E6A)), table: mat(0xF4F6F9) };
   const U = (parts) => mergeGeometries(parts.map(q => { const gg = q[0].index ? q[0].toNonIndexed() : q[0].clone(); gg.deleteAttribute('uv'); gg.deleteAttribute('normal'); gg.translate(q[1], q[2], q[3]); gg.computeVertexNormals(); return gg; }));
@@ -82,13 +82,13 @@ fetch('roster.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).th
 for (let k = 0; k < 90; k++) people(1 / 30, k / 30);
 function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(), dt = Math.min(.1, t - last); last = t; if (!SHOT) people(dt, t);
   if (tweenT < 1) { tweenT = Math.min(1, tweenT + .045); const k = 1 - Math.pow(1 - tweenT, 3); camera.position.lerpVectors(from.p, camPos, k); controls.target.lerpVectors(from.t, target, k); }
-  controls.update(); tags(); composer.render(); }
+  controls.update(); if (camera.position.y < 1.2) { camera.position.y = 1.2; } tags(); composer.render(); }
 { // city skyline: flat silhouettes in 3 depths, unlit, no shadows, not clickable
   let sd = 7; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   const LAY = [{ z: -95, c: 0x1B3D66, hMin: 6, hMax: 20, w: [5, 11] }, { z: -150, c: 0x285886, hMin: 10, hMax: 32, w: [7, 15] }, { z: -220, c: 0x3C70A2, hMin: 14, hMax: 46, w: [9, 20] }];
   const WIN = []; const sky = new THREE.Group(); sky.name = 'SKYLINE';
-  LAY.forEach((l, li) => { const parts = []; let x = -260;
-    while (x < 260) { const w = l.w[0] + R() * (l.w[1] - l.w[0]), h = l.hMin + R() * (l.hMax - l.hMin), gap = R() < .25 ? 1 + R() * 3 : 0;
+  LAY.forEach((l, li) => { const parts = []; let x = -560;
+    while (x < 560) { const w = l.w[0] + R() * (l.w[1] - l.w[0]), h = l.hMin + R() * (l.hMax - l.hMin), gap = R() < .25 ? 1 + R() * 3 : 0;
       const g = new THREE.PlaneGeometry(w, h + 8); g.translate(x + w / 2, (h + 8) / 2 - 8, l.z); parts.push(g);
       if (R() < .2) { const s = new THREE.PlaneGeometry(.5, 4 + R() * 5); s.translate(x + w / 2, h + 2, l.z); parts.push(s); }
       if (li === 0 && R() < .55) { const n = 1 + Math.floor(R() * 3); for (let k = 0; k < n; k++) WIN.push([x + 1 + R() * (w - 2), 1 + R() * (h - 2), l.z + .05]); }
@@ -97,10 +97,15 @@ function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(),
   const wm = new THREE.InstancedMesh(new THREE.PlaneGeometry(.55, .75), new THREE.MeshBasicMaterial({ color: 0xE98A3A }), WIN.length); const o = new THREE.Object3D();
   WIN.forEach((p, i) => { o.position.set(p[0], p[1], p[2]); o.updateMatrix(); wm.setMatrixAt(i, o.matrix); }); wm.raycast = () => {}; sky.add(wm);
   scene.add(sky); }
+{ // big ground: one 2-tri plane to the skyline and beyond; inner part keeps the plaza look, far part fades into fog
+  const gm = new THREE.MeshStandardMaterial({ color: 0x3E4C5E, roughness: 1 });
+  const gp = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400).rotateX(-Math.PI / 2), gm); gp.position.y = -.21; gp.receiveShadow = true; gp.raycast = () => {}; gp.name = 'GROUND_far'; scene.add(gp);
+  scene.fog = new THREE.Fog(0x1B3D66, 300, 900); }
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
 if (SHOT === 'floor3') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + 1.1, -1.5); camPos.set(-6.8, y + 3.6, 15.5); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'lobby') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; target.set(0, y + 2.8, 0); camPos.set(1.5, y + 3.8, 26); camera.position.copy(camPos); controls.target.copy(target); }
+if (Q.get('az') !== null) { const az = +Q.get('az'), po = Math.min(1.55, +Q.get('pol')), d = +Q.get('dist'); tweenT = 1; controls.update(); const tg = controls.target.clone(); camera.position.set(tg.x + d * Math.sin(po) * Math.sin(az), tg.y + d * Math.cos(po), tg.z + d * Math.sin(po) * Math.cos(az)); camera.lookAt(tg); }
 if (SHOT === 'info') info.style.display = 'block';
 document.title = 'STATS=' + JSON.stringify(stats());
 loop();
