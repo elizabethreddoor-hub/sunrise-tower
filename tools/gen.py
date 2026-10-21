@@ -33,7 +33,8 @@ html='''<!doctype html>
 #info h2{margin:0;padding:12px 16px;font-size:17px;color:#E9C77B;border-bottom:1px solid rgba(180,140,76,.5);display:flex;justify-content:space-between}
 #info button{background:none;border:0;color:#d8cfc4;font-size:18px;cursor:pointer}#info .b{padding:12px 16px;font-size:14px;line-height:1.7}
 #info .ex{display:inline-block;font-size:12px;color:#1c1a1c;background:#E9C77B;border-radius:6px;padding:1px 8px;margin-bottom:8px}
-body.nogl #hint{display:none}</style></head><body>
+body.nogl #hint{display:none}
+.ntag{position:absolute;transform:translate(-50%,-100%);padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.88);color:#1F4E85;border:1px solid #F08A24;font-size:12px;white-space:nowrap;pointer-events:none;z-index:3}</style></head><body>
 <div id="three"></div><div id="hint">拖曳可微轉、滾輪縮放；點大樓看公司服務資訊</div>
 <div id="info" role="dialog"><h2>公司服務資訊<button id="ix" aria-label="關閉">×</button></h2><div class="b">
 <span class="ex">範例文字・待填入</span>
