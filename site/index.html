@@ -320,6 +320,20 @@ for (let k = 0; k < 90; k++) people(1 / 30, k / 30);
 function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(), dt = Math.min(.1, t - last); last = t; if (!SHOT) people(dt, t);
   if (tweenT < 1) { tweenT = Math.min(1, tweenT + .045); const k = 1 - Math.pow(1 - tweenT, 3); camera.position.lerpVectors(from.p, camPos, k); controls.target.lerpVectors(from.t, target, k); }
   controls.update(); tags(); composer.render(); }
+{ // city skyline: flat silhouettes in 3 depths, unlit, no shadows, not clickable
+  let sd = 7; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const LAY = [{ z: -95, c: 0x1B3D66, hMin: 6, hMax: 20, w: [5, 11] }, { z: -150, c: 0x285886, hMin: 10, hMax: 32, w: [7, 15] }, { z: -220, c: 0x3C70A2, hMin: 14, hMax: 46, w: [9, 20] }];
+  const WIN = []; const sky = new THREE.Group(); sky.name = 'SKYLINE';
+  LAY.forEach((l, li) => { const parts = []; let x = -260;
+    while (x < 260) { const w = l.w[0] + R() * (l.w[1] - l.w[0]), h = l.hMin + R() * (l.hMax - l.hMin), gap = R() < .25 ? 1 + R() * 3 : 0;
+      const g = new THREE.PlaneGeometry(w, h + 8); g.translate(x + w / 2, (h + 8) / 2 - 8, l.z); parts.push(g);
+      if (R() < .2) { const s = new THREE.PlaneGeometry(.5, 4 + R() * 5); s.translate(x + w / 2, h + 2, l.z); parts.push(s); }
+      if (li === 0 && R() < .55) { const n = 1 + Math.floor(R() * 3); for (let k = 0; k < n; k++) WIN.push([x + 1 + R() * (w - 2), 1 + R() * (h - 2), l.z + .05]); }
+      x += w + gap; }
+    const m = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshBasicMaterial({ color: l.c, fog: false })); m.renderOrder = -10 + li; m.raycast = () => {}; sky.add(m); });
+  const wm = new THREE.InstancedMesh(new THREE.PlaneGeometry(.55, .75), new THREE.MeshBasicMaterial({ color: 0xE98A3A }), WIN.length); const o = new THREE.Object3D();
+  WIN.forEach((p, i) => { o.position.set(p[0], p[1], p[2]); o.updateMatrix(); wm.setMatrixAt(i, o.matrix); }); wm.raycast = () => {}; sky.add(wm);
+  scene.add(sky); }
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
 if (SHOT === 'floor3') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + 1.1, -1.5); camPos.set(-6.8, y + 3.6, 15.5); camera.position.copy(camPos); controls.target.copy(target); }
