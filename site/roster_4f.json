@@ -1,0 +1,17 @@
+{"version":1,"team":"SRG","floor":4,"residents":[
+{"id":"srg_01","name":"秘書小美","desk":0,"skin":"srg_01","persona":"活潑","accessory":"杯子"},
+{"id":"srg_02","name":"AI PMO for GROK Org.","desk":1,"skin":"srg_02","persona":"專注","accessory":"筆電"},
+{"id":"srg_03","name":"社團規劃師","desk":2,"skin":"srg_03","persona":"活潑","accessory":"背包"},
+{"id":"srg_04","name":"法衡","desk":3,"skin":"srg_04","persona":"專注","accessory":"眼鏡"},
+{"id":"srg_05","name":"知言","desk":4,"skin":"srg_05","persona":"悠閒","accessory":"杯子"},
+{"id":"srg_06","name":"孵化助理","desk":5,"skin":"srg_06","persona":"活潑","accessory":"背包"},
+{"id":"srg_07","name":"阿驗","desk":6,"skin":"srg_07","persona":"專注","accessory":"眼鏡"},
+{"id":"srg_08","name":"A王","desk":7,"skin":"srg_08","persona":"專注","accessory":"筆電"},
+{"id":"srg_09","name":"阿銷","desk":8,"skin":"srg_09","persona":"活潑","accessory":""},
+{"id":"srg_10","name":"科金助理","desk":9,"skin":"srg_10","persona":"專注","accessory":"筆電"},
+{"id":"srg_11","name":"小七","desk":10,"skin":"srg_11","persona":"活潑","accessory":"杯子"},
+{"id":"srg_12","name":"知策","desk":11,"skin":"srg_12","persona":"悠閒","accessory":"眼鏡"},
+{"id":"srg_13","name":"經營幕僚室","desk":12,"skin":"srg_13","persona":"專注","accessory":""},
+{"id":"srg_14","name":"Charlie","desk":13,"skin":"srg_14","persona":"悠閒","accessory":""},
+{"id":"srg_15","name":"系策","desk":14,"skin":"srg_15","persona":"專注","accessory":"筆電"},
+{"id":"srg_16","name":"小明","desk":15,"skin":"srg_16","persona":"悠閒","accessory":"帽子"}]}
