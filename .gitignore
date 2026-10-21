@@ -1,0 +1,5 @@
+gas/
+.clasp.json
+.clasprc.json
+*.secret
+secrets/
