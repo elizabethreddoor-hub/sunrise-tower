@@ -7,11 +7,12 @@
   const SIT = { '活潑': [8, 20], '專注': [30, 60], '悠閒': [15, 35] };
   const RES4 = []; let LY = null;
   function add4(r) { RES4.forEach(p => { p.tag.remove(); scene.remove(p.g); }); RES4.length = 0; if (LY) { scene.remove(LY); LY = null; }
-    ((r && r.residents) || []).slice(0, 16).forEach(a => { if (!a || !a.name || !/^srg_\d\d$/.test(a.skin || '')) return; SKINS[a.skin] = 'skins4f/' + a.skin + '.png';
+    ((r && r.residents) || []).slice(0, 16).forEach(a => { if (!a || !/^srg_\d\d$/.test(a.skin || '')) return; SKINS[a.skin] = 'skins4f/' + a.skin + '.png';
       const F4 = FID4[a.floor] || 'RF', y4 = floorY[F4], d = desk4(+a.desk || 0), st = SIT[a.persona] || SIT['專注'];
-      const p = { res: true, fid: F4, sc: 1, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: y4 + T, seat: 1, sitT: rnd(st[0], st[1]), to: null, pause: 0 };
+      const p = { res: true, id: String(a.id || a.skin), fid: F4, sc: 1, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: y4 + T, seat: 1, sitT: rnd(st[0], st[1]), to: null, pause: 0 };
       p.g = buildBlock(a.skin, 1); if (!p.g) return; 
-      const tag = document.createElement('div'); tag.className = 'ntag'; tag.textContent = String(a.name).slice(0, 20); box.appendChild(tag); p.tag = tag; RES4.push(p); });
+      const tag = document.createElement('div'); tag.className = 'ntag'; box.appendChild(tag); p.tag = tag; RES4.push(p); });
+    if (LAST_ST || LAST_NM) applyStatus(LAST_ST || [], LAST_NM);
     if (RES4.length) { LY = new THREE.InstancedMesh(lanyard(RES4[0].g.userData.px), GOLD, RES4.length); LY.frustumCulled = false; LY.castShadow = true; scene.add(LY); }
     RES.push(...RES4); }
   LYSYNC = () => { if (!LY) return; RES4.forEach((p, i) => LY.setMatrixAt(i, p.g.userData.rig.torso.matrixWorld)); LY.instanceMatrix.needsUpdate = true; };

@@ -28,7 +28,7 @@ for (let i = 0; i < NP; i++) { const p = { fid: FL[i], sc: 1.15, ph: Math.random
 const o3 = new THREE.Object3D(), pv = new THREE.Object3D(); o3.add(pv);
 function place(im, i, p, lx, ly, swing, part) { o3.position.set(p.x, p.y, p.z); o3.rotation.set(0, p.ry, 0); o3.scale.setScalar(p.sc); const h = PART[part][0].parameters.height;
   pv.position.set(lx, ly + h, 0); pv.rotation.set(swing, 0, 0); pv.updateMatrix(); o3.updateMatrix(); const m = new THREE.Matrix4().makeTranslation(0, -h / 2, 0); im.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(o3.matrix, pv.matrix).multiply(m)); }
-const ROSTER_FALLBACK = {"residents": [{"id": "mira", "name": "Mira", "floor": 3, "desk": 1, "skin": "mira"}, {"id": "vera", "name": "Vera", "floor": 3, "desk": 2, "skin": "vera"}, {"id": "stylist", "name": "造型師", "floor": 3, "desk": 4, "skin": "stylist"}, {"id": "contract", "name": "合約管家", "floor": 3, "desk": 5, "skin": "contract"}, {"id": "fx", "name": "外匯小精靈", "floor": 3, "desk": 7, "skin": "fx", "scale": 0.5}, {"id": "nova", "name": "Nova", "floor": 3, "desk": 8, "skin": "nova"}]};
+const ROSTER_FALLBACK = {"residents": [{"id": "mira", "floor": 3, "desk": 1, "skin": "mira"}, {"id": "vera", "floor": 3, "desk": 2, "skin": "vera"}, {"id": "stylist", "floor": 3, "desk": 4, "skin": "stylist"}, {"id": "contract", "floor": 3, "desk": 5, "skin": "contract"}, {"id": "fx", "floor": 3, "desk": 7, "skin": "fx", "scale": 0.5}, {"id": "nova", "floor": 3, "desk": 8, "skin": "nova"}]};
 const FLOOR_ID = { 1: '1F', 2: '2F', 3: '3F', 4: 'RF' }, RES = [];
 const SKIN_UV = { head: [0, 0, 8, 8, 8], hat: [32, 0, 8, 8, 8], body: [16, 16, 8, 12, 4], jacket: [16, 32, 8, 12, 4], rarm: [40, 16, 4, 12, 4], rsleeve: [40, 32, 4, 12, 4],
   larm: [32, 48, 4, 12, 4], lsleeve: [48, 48, 4, 12, 4], rleg: [0, 16, 4, 12, 4], rpants: [0, 32, 4, 12, 4], lleg: [16, 48, 4, 12, 4], lpants: [0, 48, 4, 12, 4] };
@@ -48,12 +48,12 @@ function buildBlock(id, scale) { const M0 = skinMats(id); if (!M0) return null; 
   r.legR = mk(part('rleg', 'rpants', px, -6, 4, 12, 4), g, -2 * px, 12 * px); r.legL = mk(part('lleg', 'lpants', px, -6, 4, 12, 4), g, 2 * px, 12 * px);
   r.armR = mk(part('rarm', 'rsleeve', px, -4, 4, 12, 4), g, -6 * px, 22 * px); r.armL = mk(part('larm', 'lsleeve', px, -4, 4, 12, 4), g, 6 * px, 22 * px);
   g.userData.rig = r; g.userData.M = M; g.userData.px = px; scene.add(g); return g; }
-function setRoster(r) { const list = ((r && r.residents) || []).filter(a => a && a.name && FLOOR_ID[a.floor] && floorY[FLOOR_ID[a.floor]] !== undefined).slice(0, RMAX);
+function setRoster(r) { const list = ((r && r.residents) || []).filter(a => a && (a.skin || a.id) && FLOOR_ID[a.floor] && floorY[FLOOR_ID[a.floor]] !== undefined).slice(0, RMAX);
   RES.forEach(p => { p.tag.remove(); if (p.bub) p.bub.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0;
   list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], d = deskPos(+a.desk || 0), sc = +a.scale || 1;
     const p = { res: true, id: String(a.id || a.skin || ''), want: null, dim: 0, fid, sc, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0 };
     p.g = buildBlock(a.skin || a.id, sc);
-    const tag = document.createElement('div'); tag.className = 'ntag'; tag.textContent = String(a.name).slice(0, 20); box.appendChild(tag); p.tag = tag;
+    const tag = document.createElement('div'); tag.className = 'ntag'; box.appendChild(tag); p.tag = tag;
     const bub = document.createElement('div'); bub.className = 'bub'; box.appendChild(bub); p.bub = bub; RES.push(p); });
   RES.forEach(p => { p.bubT = ''; }); if (LAST_ST) applyStatus(LAST_ST); }
 function poseBlock(p, m, t) { const g = p.g, R = g.userData.rig, px = g.userData.px; let sw = 0; g.position.set(p.x, p.y, p.z); g.rotation.y = p.ry;
@@ -64,8 +64,9 @@ function poseBlock(p, m, t) { const g = p.g, R = g.userData.rig, px = g.userData
 // live status: want = 'work' (seated), 'idle' (stands and strolls), 'away' (seated, dimmed). null = no status data -> default rhythm.
 // A change never jumps: walkers finish their walk back to the desk; sitters stand up only after the current arm swing ends.
 let LAST_ST = null;
-function applyStatus(list) { LAST_ST = list; const by = {}; (list || []).forEach(r => { by[String(r.id).replace(/^home_/, '')] = r; });
-  RES.forEach(p => { const r = by[p.id]; if (!r) return; const live = r.fresh === 'live';
+let LAST_NM = null;
+function applyStatus(list, names) { LAST_ST = list; if (names !== undefined) LAST_NM = names || null; const by = {}; (list || []).forEach(r => { by[String(r.id).replace(/^home_/, '')] = r; });
+  RES.forEach(p => { const r = by[p.id] || {}; const nm = r.name || (LAST_NM && LAST_NM[p.id]) || ''; if (p.tag.textContent !== nm) p.tag.textContent = String(nm).slice(0, 20); if (!r.id) { p.bubT = ''; return; } const live = r.fresh === 'live';
     p.want = !live ? 'away' : (r.state === 'work' ? 'work' : 'idle');
     p.bubT = live && r.activity ? String(r.activity).slice(0, 18) : '';
     if (SHOT) { p.dim = p.want === 'away' ? 1 : 0; if (p.want === 'idle') { p.seat = 0; p.pause = 0; p.back = false; p.x = p.home[0] + 1.2; p.z = p.home[1] + 2.4; p.to = [p.x + .01, p.z]; p.ry = .6; } else { p.seat = 1; p.x = p.home[0]; p.z = p.home[1]; } dimSync(p); } });
@@ -98,7 +99,7 @@ function people(dt, t) { PEOPLE.concat(RES).forEach((p, i) => { let sw = 0;
 const tv3 = new THREE.Vector3(); let LYSYNC = null;
 function focusFid() { let best = null, by = -1e9; Object.keys(floorY).forEach(f => { const y = floorY[f]; if (y <= controls.target.y + .3 && y > by) { by = y; best = f; } }); return best; }
 function tags() { if (LYSYNC) LYSYNC(); const ff = focusFid(); RES.forEach(p => { tv3.set(p.x, p.y + (p.seat ? .5 + 1.3 * p.sc : 2.05 * p.sc), p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
-  const show = dist < 45 && p.fid === ff && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? 'block' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; }
+  const show = !!p.tag.textContent && dist < 45 && p.fid === ff && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? 'block' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; }
   p.tag.style.opacity = p.dim > .5 ? .55 : 1; if (!p.bub) return; const sb = show && p.bubT; p.bub.style.display = sb ? 'block' : 'none'; if (sb) { if (p.bub.textContent !== p.bubT) p.bub.textContent = p.bubT; p.bub.style.left = p.tag.style.left; p.bub.style.top = (parseFloat(p.tag.style.top) - 24) + 'px'; } }); }
 
 const info = document.getElementById('info'); document.getElementById('ix').onclick = () => info.style.display = 'none';

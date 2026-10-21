@@ -3,35 +3,30 @@
  "residents": [
   {
    "id": "mira",
-   "name": "Mira",
    "floor": 3,
    "desk": 1,
    "skin": "mira"
   },
   {
    "id": "vera",
-   "name": "Vera",
    "floor": 3,
    "desk": 2,
    "skin": "vera"
   },
   {
    "id": "stylist",
-   "name": "造型師",
    "floor": 3,
    "desk": 4,
    "skin": "stylist"
   },
   {
    "id": "contract",
-   "name": "合約管家",
    "floor": 3,
    "desk": 5,
    "skin": "contract"
   },
   {
    "id": "fx",
-   "name": "外匯小精靈",
    "floor": 3,
    "desk": 7,
    "skin": "fx",
@@ -39,7 +34,6 @@
   },
   {
    "id": "nova",
-   "name": "Nova",
    "floor": 3,
    "desk": 8,
    "skin": "nova"
