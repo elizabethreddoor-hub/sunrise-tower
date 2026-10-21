@@ -1,8 +1,8 @@
 // Polls the public state endpoint (plain GET, no custom headers -> no CORS preflight; Apps Script redirects to googleusercontent with ACAO:*).
 // Hands the list to the 3D scene (window.P7_applyStatus); characters change state gracefully there.
-// ?mock=live is a screenshot-only preview: fake data, nothing is sent anywhere.
+// ?shot=…&mock=live is a screenshot-only preview (ignored without ?shot): fake data, nothing is sent anywhere.
 (function () {
-  var C = window.P7_STATUS || {}, Q = new URLSearchParams(location.search), mock = Q.get('mock');
+  var C = window.P7_STATUS || {}, Q = new URLSearchParams(location.search), mock = Q.get('shot') ? Q.get('mock') : null;
   if (!mock && (!C.enabled || !C.url)) return;
   function ready(cb) { if (window.P7_applyStatus) cb(); else setTimeout(function () { ready(cb); }, 200); }
   if (mock) { var ids = ['mira', 'vera', 'stylist', 'contract', 'fx', 'nova'];

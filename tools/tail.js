@@ -98,8 +98,8 @@ function people(dt, t) { PEOPLE.concat(RES).forEach((p, i) => { let sw = 0;
 const tv3 = new THREE.Vector3(); let LYSYNC = null;
 function focusFid() { let best = null, by = -1e9; Object.keys(floorY).forEach(f => { const y = floorY[f]; if (y <= controls.target.y + .3 && y > by) { by = y; best = f; } }); return best; }
 function tags() { if (LYSYNC) LYSYNC(); const ff = focusFid(); RES.forEach(p => { tv3.set(p.x, p.y + (p.seat ? .5 + 1.3 * p.sc : 2.05 * p.sc), p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
-  const show = dist < 45 && p.fid === ff && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? '' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; }
-  p.tag.style.opacity = p.dim > .5 ? .55 : 1; const sb = show && p.bubT; p.bub.style.display = sb ? '' : 'none'; if (sb) { if (p.bub.textContent !== p.bubT) p.bub.textContent = p.bubT; p.bub.style.left = p.tag.style.left; p.bub.style.top = (parseFloat(p.tag.style.top) - 24) + 'px'; } }); }
+  const show = dist < 45 && p.fid === ff && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? 'block' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; }
+  p.tag.style.opacity = p.dim > .5 ? .55 : 1; if (!p.bub) return; const sb = show && p.bubT; p.bub.style.display = sb ? 'block' : 'none'; if (sb) { if (p.bub.textContent !== p.bubT) p.bub.textContent = p.bubT; p.bub.style.left = p.tag.style.left; p.bub.style.top = (parseFloat(p.tag.style.top) - 24) + 'px'; } }); }
 
 const info = document.getElementById('info'); document.getElementById('ix').onclick = () => info.style.display = 'none';
 const ray = new THREE.Raycaster(), mv = new THREE.Vector2(); let down = null;
