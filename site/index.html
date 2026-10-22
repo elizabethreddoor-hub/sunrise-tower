@@ -381,7 +381,7 @@ function applyStatus(list, names) { LAST_ST = list; if (names !== undefined) LAS
     else if (SHOT && Q.get('mock') === 'coffee' && /^srg_0[1-4]$|^nova$/.test(p.id)) { const i = +p.id.slice(-1) || 0; goal(p, i % 4 === 0 ? { fid: '1F', x: ICAFE.pick[0], z: ICAFE.pick[1], ry: Math.PI, act: 'look' } : { fid: '1F', x: ICAFE.q[(i % 4) - 1][0], z: ICAFE.q[(i % 4) - 1][1], ry: Math.PI, act: 'look' }); if (i % 4 === 0) cupSet(p, 1); }
     else if (SHOT && Q.get('mock') === 'lift' && /^(vera|fx|srg_03)$/.test(p.id)) { const sd = p.id === 'srg_03' ? -1 : 1, k = { vera: 0, fx: 1, srg_03: 2 }[p.id]; goal(p, { fid: p.hf, x: sd * (ELEV_X - [1.2, .1, .05][k]), z: [.9, .2, .3][k], ry: [Math.PI / 2, 0, Math.PI][k], act: 'look' }); if (k) p.g.visible = true; doorOpen(p.hf, sd); DOPEN[p.hf + sd] = 1.3; doorTick(0); } else if (p.mode !== 'wander') goal(p, deskGoal(p, 'rest')); });
   // team-view speech bubbles: only residents in a meeting whose AI sent a say text (backend returns say only to team tokens)
-  const GR = {}; RES.forEach(p => { const r = by[p.id] || {}; p.sayT = LAST_NM && p.want === 'meet' && r.say ? String(r.say).slice(0, 30) : ''; if (p.sayT) { const k = (MG[p.id] || {}).fid + ':' + Object.keys(MG).filter(i => MG[i].fid === (MG[p.id] || {}).fid).length; (GR[k] = GR[k] || []).push(p); } });
+  const GR = {}; RES.forEach(p => { const r = by[p.id] || {}; const mt = p.want === 'meet' && r.say ? r.say : r.msg; p.sayT = LAST_NM && mt ? String(mt).slice(0, 30) : ''; if (p.sayT) { const k = !(p.want === 'meet' && r.say) ? 'm:' + p.id : (MG[p.id] || {}).fid + ':' + Object.keys(MG).filter(i => MG[i].fid === (MG[p.id] || {}).fid).length; (GR[k] = GR[k] || []).push(p); } });
   Object.values(GR).forEach(l => l.forEach((p, i) => { p.sayOrd = i; p.sayN = l.length; }));
   if (SHOT) people(0, 0); }
 window.P7_applyStatus = applyStatus;
@@ -429,7 +429,12 @@ const ray = new THREE.Raycaster(), mv = new THREE.Vector2(); let down = null;
 renderer.domElement.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
 renderer.domElement.addEventListener('pointerup', e => { if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return; const r = renderer.domElement.getBoundingClientRect();
   mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, camera);
+  if (document.body.classList.contains('team')) { // team mode: no visitor info; clicking a character opens its 今日紀錄
+    const hit = ray.intersectObjects(RES.filter(p => p.g && p.g.visible).map(p => p.g), true)[0]; if (!hit) return;
+    const p = RES.find(q => { let o = hit.object; while (o) { if (o === q.g) return true; o = o.parent; } return false; });
+    if (p && window.P7_pick) { const r = (LAST_ST || []).find(x => String(x.id).replace(/^home_/, '') === p.id); window.P7_pick(r ? r.id : p.id); } return; }
   if (ray.intersectObject(world, true).length) info.style.display = 'block'; });
+window.P7_pickShot = id => { if (window.P7_pick) window.P7_pick(id); };
 
 function resize() { const w = box.clientWidth || 800, h = box.clientHeight || 600; renderer.setSize(w, h, false); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
@@ -531,4 +536,4 @@ document.title = 'STATS=' + JSON.stringify(stats());
 loop();
 
 </script>
-<script src="status_config.js"></script><script src="status_poll.js"></script></body></html>
+<script src="status_config.js"></script><script src="status_poll.js"></script><script src="team_board.js"></script></body></html>

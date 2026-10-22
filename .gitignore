@@ -4,3 +4,4 @@ gas/
 *.secret
 secrets/
 invite/
+mock/

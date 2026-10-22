@@ -53,5 +53,5 @@ body.nogl #hint{display:none}
 <script type="module">
 '''+js+extras+tail+'''
 </script>
-<script src="status_config.js"></script><script src="status_poll.js"></script></body></html>'''
+<script src="status_config.js"></script><script src="status_poll.js"></script><script src="team_board.js"></script></body></html>'''
 open('/workspace/p007/site/index.html','w',encoding='utf-8').write(html)
