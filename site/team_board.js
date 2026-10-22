@@ -48,7 +48,7 @@
       bd.appendChild(el('h4', '', '最近 10 筆工作紀錄')); if (!b.recent.length) bd.appendChild(el('div', 'em', '還沒有紀錄'));
       b.recent.forEach(function (j) { var d = el('div', 'r'); d.appendChild(el('span', 't', hm(j.ts))); d.appendChild(el('span', 'n', j.name));
         d.appendChild(D.createTextNode(' ' + (j.kind === 'start' ? '開始' : '完成') + (j.mode === 'meet' ? '討論' + (j['with'].length ? '（' + j['with'].join('、') + '）' : '') : '工作') + (j.activity ? '：' + j.activity : ''))); bd.appendChild(d); });
-      bd.appendChild(el('h4', '', '超過 2 小時沒有回報')); if (!b.stale.length) bd.appendChild(el('div', 'em', '全部都有回報'));
+      bd.appendChild(el('h4', '', '超過 3.5 小時沒有回報')); if (!b.stale.length) bd.appendChild(el('div', 'em', '全部都有回報'));
       var w = el('div'); b.stale.forEach(function (r) { w.appendChild(el('span', 'chip', r.name)); }); bd.appendChild(w); return; }
     var nm = names(), fr = el('div', 'sayrow'), sel = el('select'); sel.appendChild(new Option('全部對話', ''));
     [1, 2, 3, 4].forEach(function (f) { sel.appendChild(new Option(f + 'F 樓層', 'f:' + f)); });
