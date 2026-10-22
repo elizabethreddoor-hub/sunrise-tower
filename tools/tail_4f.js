@@ -6,7 +6,7 @@
     return mergeGeometries(parts.map(g => { g.deleteAttribute('uv'); return g; })); }
   const SIT = { '活潑': [8, 20], '專注': [30, 60], '悠閒': [15, 35] };
   const RES4 = []; let LY = null;
-  function add4(r) { RES4.forEach(p => { p.tag.remove(); scene.remove(p.g); }); RES4.length = 0; if (LY) { scene.remove(LY); LY = null; }
+  function add4(r) { RES4.forEach(p => { p.tag.remove(); if (p.sayEl) p.sayEl.remove(); scene.remove(p.g); }); RES4.length = 0; if (LY) { scene.remove(LY); LY = null; }
     ((r && r.residents) || []).slice(0, 16).forEach(a => { if (!a || !/^srg_\d\d$/.test(a.skin || '')) return; SKINS[a.skin] = 'skins4f/' + a.skin + '.png';
       const F4 = FID4[a.floor] || 'RF', y4 = floorY[F4], d = desk4(+a.desk || 0), st = SIT[a.persona] || SIT['專注'];
       const p = { res: true, id: String(a.id || a.skin), fid: F4, sc: 1, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: y4 + T, seat: 1, sitT: rnd(st[0], st[1]), to: null, pause: 0 };

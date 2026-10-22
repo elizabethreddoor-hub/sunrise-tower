@@ -21,7 +21,7 @@ const PART = { torso: [B(.5, .62, .3), .95], head: [B(.36, .36, .36), 1.48], leg
 const IM = {}; ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => { const p = PART[k.replace(/[LR]$/, '')]; const im = new THREE.InstancedMesh(p[0], new THREE.MeshStandardMaterial({ roughness: .9, flatShading: true }), NP); im.castShadow = true; im.frustumCulled = false; IM[k] = im; scene.add(im); });
 const AREA = { '1F': { x: [-12.5, 12.5], z: [-3.5, 8.5] }, up: { x: [-12, 12], z: [3, 8] } };
 const rnd = (a, b) => a + Math.random() * (b - a);
-const FL = ['1F', '1F', '1F', '1F', '1F', '2F', '2F', 'RF'];
+const FL = ['1F', '1F', '1F', '1F', '1F', '1F', '1F', '1F']; // grey ambient visitors: 1F lobby only (user: none on 2F+)
 function pick(p) { const A = p.fid === '1F' ? AREA['1F'] : AREA.up; return [rnd(A.x[0], A.x[1]), rnd(A.z[0], A.z[1])]; }
 for (let i = 0; i < NP; i++) { const p = { fid: FL[i], sc: 1.15, ph: Math.random() * 6, pause: rnd(0, 3) }; const q = pick(p); p.x = q[0]; p.z = q[1]; p.to = pick(p); p.ry = 0; p.y = floorY[p.fid] + T; PEOPLE.push(p);
   const c = new THREE.Color(SKIN[i]), d = new THREE.Color(SKIN[i]).multiplyScalar(.7); Object.keys(IM).forEach(k => IM[k].setColorAt(i, /leg/.test(k) ? d : c)); }
@@ -49,7 +49,7 @@ function buildBlock(id, scale) { const M0 = skinMats(id); if (!M0) return null; 
   r.armR = mk(part('rarm', 'rsleeve', px, -4, 4, 12, 4), g, -6 * px, 22 * px); r.armL = mk(part('larm', 'lsleeve', px, -4, 4, 12, 4), g, 6 * px, 22 * px);
   g.userData.rig = r; g.userData.M = M; g.userData.px = px; scene.add(g); return g; }
 function setRoster(r) { const list = ((r && r.residents) || []).filter(a => a && (a.skin || a.id) && FLOOR_ID[a.floor] && floorY[FLOOR_ID[a.floor]] !== undefined).slice(0, RMAX);
-  RES.forEach(p => { p.tag.remove(); if (p.bub) p.bub.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0;
+  RES.forEach(p => { p.tag.remove(); if (p.bub) p.bub.remove(); if (p.sayEl) p.sayEl.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0;
   list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], d = deskPos(+a.desk || 0), sc = +a.scale || 1;
     const p = { res: true, id: String(a.id || a.skin || ''), want: null, dim: 0, fid, sc, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0 };
     p.g = buildBlock(a.skin || a.id, sc);
@@ -138,6 +138,9 @@ function applyStatus(list, names) { LAST_ST = list; if (names !== undefined) LAS
     else if (SHOT && Q.get('mock') === 'cmp' && p.id === 'vera') goal(p, { fid: '3F', x: -9.6, z: 3.4, ry: .5, act: 'look' });
     else if (SHOT && Q.get('mock') === 'coffee' && /^srg_0[1-4]$|^nova$/.test(p.id)) { const i = +p.id.slice(-1) || 0; goal(p, i % 4 === 0 ? { fid: '1F', x: ICAFE.pick[0], z: ICAFE.pick[1], ry: Math.PI, act: 'look' } : { fid: '1F', x: ICAFE.q[(i % 4) - 1][0], z: ICAFE.q[(i % 4) - 1][1], ry: Math.PI, act: 'look' }); if (i % 4 === 0) cupSet(p, 1); }
     else if (SHOT && Q.get('mock') === 'lift' && /^(vera|fx|srg_03)$/.test(p.id)) { const sd = p.id === 'srg_03' ? -1 : 1, k = { vera: 0, fx: 1, srg_03: 2 }[p.id]; goal(p, { fid: p.hf, x: sd * (ELEV_X - [1.2, .1, .05][k]), z: [.9, .2, .3][k], ry: [Math.PI / 2, 0, Math.PI][k], act: 'look' }); if (k) p.g.visible = true; doorOpen(p.hf, sd); DOPEN[p.hf + sd] = 1.3; doorTick(0); } else if (p.mode !== 'wander') goal(p, deskGoal(p, 'rest')); });
+  // team-view speech bubbles: only residents in a meeting whose AI sent a say text (backend returns say only to team tokens)
+  const GR = {}; RES.forEach(p => { const r = by[p.id] || {}; p.sayT = LAST_NM && p.want === 'meet' && r.say ? String(r.say).slice(0, 30) : ''; if (p.sayT) { const k = (MG[p.id] || {}).fid + ':' + Object.keys(MG).filter(i => MG[i].fid === (MG[p.id] || {}).fid).length; (GR[k] = GR[k] || []).push(p); } });
+  Object.values(GR).forEach(l => l.forEach((p, i) => { p.sayOrd = i; p.sayN = l.length; }));
   if (SHOT) people(0, 0); }
 window.P7_applyStatus = applyStatus;
 function dimSync(p) { const ms = p.g && p.g.userData.M; if (!ms) return; const k = 1 - .68 * p.dim;
@@ -174,7 +177,10 @@ const tv3 = new THREE.Vector3(); let LYSYNC = null;
 function focusFid() { let best = null, by = -1e9; Object.keys(floorY).forEach(f => { const y = floorY[f]; if (y <= controls.target.y + .3 && y > by) { by = y; best = f; } }); return best; }
 function tags() { if (LYSYNC) LYSYNC(); const ff = focusFid(); RES.forEach(p => { tv3.set(p.x, p.y + (p.seat ? .5 + 1.3 * p.sc : 2.05 * p.sc), p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
   const show = !!p.tag.textContent && dist < 45 && p.fid === ff && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? 'block' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; }
-  p.tag.style.opacity = p.dim > .5 ? .55 : 1; if (!p.bub) return; const sb = show && p.bubT; p.bub.style.display = sb ? 'block' : 'none'; if (sb) { if (p.bub.textContent !== p.bubT) p.bub.textContent = p.bubT; p.bub.style.left = p.tag.style.left; p.bub.style.top = (parseFloat(p.tag.style.top) - 24) + 'px'; } }); }
+  p.tag.style.opacity = p.dim > .5 ? .55 : 1;
+  if (p.sayT && !p.sayEl) { p.sayEl = document.createElement('div'); p.sayEl.className = 'say'; box.appendChild(p.sayEl); }
+  if (p.sayEl) { const on = show && p.sayT && (SHOT || Math.floor(performance.now() / 3500) % (p.sayN || 1) === (p.sayOrd || 0)); p.sayEl.style.display = on ? 'block' : 'none';
+    if (on) { if (p.sayEl.textContent !== p.sayT) p.sayEl.textContent = p.sayT; p.sayEl.style.left = p.tag.style.left; p.sayEl.style.top = (parseFloat(p.tag.style.top) - 26 - (p.bubT ? 24 : 0)) + 'px'; } } if (!p.bub) return; const sb = show && p.bubT; p.bub.style.display = sb ? 'block' : 'none'; if (sb) { if (p.bub.textContent !== p.bubT) p.bub.textContent = p.bubT; p.bub.style.left = p.tag.style.left; p.bub.style.top = (parseFloat(p.tag.style.top) - 24) + 'px'; } }); }
 
 const info = document.getElementById('info'); document.getElementById('ix').onclick = () => info.style.display = 'none';
 const ray = new THREE.Raycaster(), mv = new THREE.Vector2(); let down = null;
