@@ -1,12 +1,18 @@
 // P007 團隊模式：內部工作看板、對話面板、角色今日紀錄。只在輸入團隊觀看碼後出現；資料都從後端用觀看憑證即時取得，這個檔案本身不含任何對話或敏感資料。
 (function () {
-  var Q = new URLSearchParams(location.search), D = document, on = false, tab = Q.get('panel') === 'chat' ? 'chat' : 'board', speak = null, data = { board: null, log: [] }, filt = '', busy = false;
+  var Q = new URLSearchParams(location.search), D = document, on = false, tab = Q.get('panel') === 'chat' ? 'chat' : 'board', speak = null, data = { board: null, log: [] }, filt = '', busy = false, SPK = 'p7_sp';
+  // 發言裝置憑證：這台裝置成功驗證過一次發言密碼後才顯示發言區（365 天）。密碼本身不存。
+  var MOCKSP = { owner: '庭彣', zhang: '張總' };
+  function spObj() { if (window.P7_mock) { var k = Q.get('speak'); return MOCKSP[k] ? { t: 'mock', name: MOCKSP[k] } : null; }
+    try { var o = JSON.parse(localStorage.getItem(SPK) || 'null'); if (o && o.t && Date.parse(o.exp) > Date.now()) return o; } catch (e) {} return null; }
+  function spTok() { var o = spObj(); return o ? o.t : null; }
   var css = D.createElement('style'); css.textContent =
     'body.team #info,body.team #hint{display:none!important}' +
     '#tb{position:absolute;left:12px;top:12px;width:min(360px,calc(100% - 24px));max-height:calc(100% - 24px);display:none;flex-direction:column;background:rgba(18,24,38,.93);color:#eef2f8;border:1px solid #2F80ED;border-radius:12px;z-index:7;font-size:13px;overflow:hidden}' +
     'body.team #tb{display:flex}#tb.min .bd{display:none}' +
     '#tb .hd{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid rgba(47,128,237,.5)}#tb .hd b{flex:1;font-size:15px;color:#9cc4ff}' +
     '#tb button{background:#24324a;color:#eef2f8;border:1px solid #3a5070;border-radius:7px;padding:3px 9px;font-size:12px;cursor:pointer}#tb button.on{background:#2F80ED;border-color:#2F80ED}' +
+    '#tb input{background:#101828;color:#eef2f8;border:1px solid #3a5070;border-radius:7px;font-size:12px;padding:4px 6px;flex:1;min-width:0}#tb .who{font-size:12px;color:#9cc4ff}#tb a.out{font-size:11px;color:#93a3b8;cursor:pointer;text-decoration:underline;margin-left:auto}#tb .go{background:#2F80ED;border-color:#2F80ED;margin-top:2px}' +
     '#tb .bd{overflow:auto;padding:8px 10px}#tb h4{margin:10px 0 4px;font-size:13px;color:#ffd08a}#tb h4:first-child{margin-top:2px}' +
     '#tb .r{padding:4px 0;border-bottom:1px dashed rgba(255,255,255,.12);line-height:1.45}#tb .t{color:#93a3b8;font-size:11px;margin-right:6px}#tb .n{color:#9cc4ff;font-weight:600}' +
     '#tb .chip{display:inline-block;margin:2px 4px 2px 0;padding:1px 8px;border-radius:9px;background:#3b2a2a;color:#ffb4a8;font-size:12px}#tb .em{color:#93a3b8}' +
@@ -33,7 +39,7 @@
   function mockApi(a, x) { var S = window.P7_SAMPLE || {}; if (a === 'board') return S.board || { ok: true, now: [], recent: [], stale: [] };
     if (a === 'msg_log') return { ok: true, messages: S.log || [] }; if (a === 'day_log') return (S.day && S.day[x.id]) || { ok: true, name: x.id, jobs: [], messages: [] }; return { ok: false }; }
   function names() { var m = {}; ((data.board && data.board.now) || []).forEach(function (r) { m[r.id] = { name: r.name, floor: r.floor }; }); return m; }
-  function render() { bB.className = tab === 'board' ? 'on' : ''; bC.className = tab === 'chat' ? 'on' : ''; bd.textContent = ''; sy.style.display = tab === 'chat' ? 'flex' : 'none';
+  function render() { bB.className = tab === 'board' ? 'on' : ''; bC.className = tab === 'chat' ? 'on' : ''; bd.textContent = ''; sy.style.display = tab === 'chat' ? 'flex' : 'none'; spUI();
     if (tab === 'board') { var b = data.board; if (!b) { bd.appendChild(el('div', 'em', '讀取中…')); return; }
       bd.appendChild(el('h4', '', '每位 AI 現在的工作'));
       b.now.slice().sort(function (a, c) { var o = { meet: 0, work: 1 }; return (o[a.state] === undefined ? 2 : o[a.state]) - (o[c.state] === undefined ? 2 : o[c.state]); }).forEach(function (r) {
@@ -55,16 +61,26 @@
       d.appendChild(D.createTextNode(' → ' + m.to_name + '：')); d.appendChild(D.createTextNode(m.body)); bd.appendChild(d); });
     bd.scrollTop = bd.scrollHeight; }
   // 庭彣發言：需要另一組「發言密碼」，只存在這個分頁的記憶體裡
-  (function () { var row = el('div', 'sayrow'), to = el('select'), ta = el('textarea'), go = el('button', '', '以庭彣身分發言'); ta.placeholder = '要說的話（最多 1000 字）'; ta.maxLength = 1000;
-    row.appendChild(el('span', '', '對象：')); row.appendChild(to); sy.appendChild(row); sy.appendChild(ta); sy.appendChild(go);
+  var spUI = function () {};
+  (function () { var lock = el('div', 'sayrow'), pw = el('input'), ub = el('button', '', '輸入發言密碼'); pw.type = 'password'; pw.placeholder = '發言密碼'; pw.autocomplete = 'off';
+    lock.appendChild(pw); lock.appendChild(ub);
+    var open = el('div'), row = el('div', 'sayrow'), to = el('select'), ta = el('textarea'), go = el('button', 'go', ''), who = el('div', 'sayrow'), wn = el('span', 'who', ''), out = el('a', 'out', '登出發言');
+    ta.placeholder = '要說的話（最多 1000 字）'; ta.maxLength = 1000; who.appendChild(wn); who.appendChild(out);
+    row.appendChild(el('span', '', '對象：')); row.appendChild(to); open.appendChild(who); open.appendChild(row); open.appendChild(ta); open.appendChild(go);
+    open.style.display = 'flex'; open.style.flexDirection = 'column'; sy.appendChild(lock); sy.appendChild(open);
+    spUI = function () { var o = spObj(); lock.style.display = o ? 'none' : 'flex'; open.style.display = o ? 'flex' : 'none';
+      if (o) { wn.textContent = '目前發言身分：' + o.name; go.textContent = '以' + o.name + '身分發言'; } };
+    var err = function (e) { return e === 'speak not set' ? '發言功能尚未開啟' : e === 'wrong speak code' ? '發言密碼不正確' : e === 'speak locked' ? '這台裝置的發言權限已失效，請重新輸入發言密碼' : e === 'rate limited' ? '太頻繁了，請一分鐘後再試' : e === 'team only' ? '團隊觀看已失效，請重新輸入觀看碼' : '失敗，請稍後再試'; };
+    ub.onclick = pw.onkeydown = function (ev) { if (ev && ev.type === 'keydown' && ev.key !== 'Enter') return; if (window.P7_mock || busy) return; var c = pw.value; if (!c.trim()) return; busy = true;
+      post({ action: 'tv_speak_unlock', tv: window.P7_tvTok(), speak_code: c }).then(function (j) { busy = false; pw.value = '';
+        if (j && j.ok) { localStorage.setItem(SPK, JSON.stringify({ t: j.speak_token, exp: j.expires, name: j.name })); spUI(); return; } alert(err(j && j.error)); })
+        .catch(function () { busy = false; pw.value = ''; alert('連線失敗，請稍後再試'); }); };
+    out.onclick = function () { if (confirm('登出發言？這台裝置之後要重新輸入發言密碼才能發言。')) { localStorage.removeItem(SPK); spUI(); } };
     to.onfocus = function () { var v = to.value, nm = names(); to.textContent = ''; [1, 2, 3, 4].forEach(function (f) { to.appendChild(new Option(f + 'F 全樓層', 'floor:' + f)); });
       Object.keys(nm).forEach(function (id) { to.appendChild(new Option(nm[id].name, id)); }); if (v) to.value = v; }; to.onfocus();
-    go.onclick = function () { if (window.P7_mock || busy) return; var body = ta.value.trim(); if (!body) return;
-      if (!speak) { speak = prompt('請輸入發言密碼'); if (!speak) return; } busy = true;
-      post({ action: 'tv_say', tv: window.P7_tvTok(), speak_code: speak, to: to.value, body: body }).then(function (j) { busy = false;
-        if (j && j.ok) { ta.value = ''; tick(); return; }
-        var e = j && j.error; if (e === 'wrong speak code') speak = null;
-        alert(e === 'speak not set' ? '發言密碼尚未設定，請管理者先設定' : e === 'wrong speak code' ? '發言密碼不正確' : e === 'rate limited' ? '太頻繁了，請一分鐘後再試' : e === 'team only' ? '團隊觀看已失效，請重新輸入觀看碼' : '送出失敗，請稍後再試'); })
+    go.onclick = function () { if (window.P7_mock || busy) return; var body = ta.value.trim(), st = spTok(); if (!body || !st) return; busy = true;
+      post({ action: 'tv_say', tv: window.P7_tvTok(), speak_token: st, to: to.value, body: body }).then(function (j) { busy = false;
+        if (j && j.ok) { ta.value = ''; tick(); return; } var e = j && j.error; if (e === 'speak locked') { localStorage.removeItem(SPK); spUI(); } alert(err(e)); })
         .catch(function () { busy = false; alert('連線失敗，請稍後再試'); }); }; })();
   function tick() { if (!on) return; api('board').then(function (j) { if (j && j.ok) { data.board = j; if (tab === 'board') render(); } }).catch(function () {});
     api('msg_log').then(function (j) { if (j && j.ok) { data.log = j.messages || []; if (tab === 'chat') render(); } }).catch(function () {}); }
