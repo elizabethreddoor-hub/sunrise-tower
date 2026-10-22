@@ -320,11 +320,19 @@ function doorOpen(fid, sd) { DOPEN[fid + sd] = 2.6; }
 function doorTick(dt) { Object.keys(DOPEN).forEach(k => { const fid = k.slice(0, 2), sd = +k.slice(2), L = DOORS[fid]; if (!L) { delete DOPEN[k]; return; } DOPEN[k] -= dt; const D0 = L[sd < 0 ? 0 : 1], o = DOPEN[k] > 0 ? Math.min(1, (2.6 - DOPEN[k]) * 3, DOPEN[k] * 3) : 0;
   D0.pan.forEach((q, i) => { q.position.x = sd * ELEV_X + (i ? 1 : -1) * (.21 + .4 * o); }); doorSync(fid); if (DOPEN[k] <= 0) delete DOPEN[k]; }); }
 // 1F coffee counter (outside the entrance, lobby is full): one box counter + one box machine (24 tris). Cup = 1 tiny box carried in the right hand.
-const CAFE = [6, 13], CUPG = B(.09, .12, .09), CUPM = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+const CAFE = [0, 0], OUTSET = new THREE.Group(); OUTSET.position.set(19.5, 0, 2); OUTSET.rotation.y = Math.PI / 2; OUTSET.name = 'OUTDOOR_COFFEE_DECOR'; scene.add(OUTSET); // decor only, right side of the building, facing it
+const ICAFE = { pick: [11.5, -6.6], q: [[10.9, -5.4], [10.9, -4.2], [10.9, -3.0]], barista: [11.5, -8.6] }; // existing indoor counter (1F right-rear)
+const CUPG = B(.09, .12, .09), CUPM = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
 { const y = floorY['1F'], g = new THREE.Group(); const c = new THREE.Mesh(B(2.4, 1.05, .6), new THREE.MeshLambertMaterial({ color: 0xF08A24 })); c.position.set(CAFE[0], y + .52, CAFE[1] + .55); c.castShadow = true; g.add(c);
-  const mm = new THREE.Mesh(B(.45, .5, .35), new THREE.MeshLambertMaterial({ color: 0x2F6FB3 })); mm.position.set(CAFE[0] + .95, y + 1.3, CAFE[1] + .6); g.add(mm); g.name = 'CAFE_1F'; scene.add(g); }
+  const mm = new THREE.Mesh(B(.45, .5, .35), new THREE.MeshLambertMaterial({ color: 0x2F6FB3 })); mm.position.set(CAFE[0] + .95, y + 1.3, CAFE[1] + .6); g.add(mm); g.name = 'CAFE_OUT'; OUTSET.add(g); }
+{ // food truck behind the coffee counter: 7 boxes + 4 wheel boxes (~132 tris), blue/white/orange
+  const y = floorY['1F'], g = new THREE.Group(), M = c => new THREE.MeshLambertMaterial({ color: c }), tx = CAFE[0], tz = CAFE[1] + 4.3;
+  [[4.4, 1.9, 2.1, 0, 1.45, 0, 0xF4F6F9], [4.42, .45, 2.12, 0, .62, 0, 0x2F6FB3], [1.3, 1.2, 2.0, 2.75, 1.0, 0, 0x2F6FB3], [2.6, .9, .04, -.3, 1.75, -1.06, 0x1B2430],
+   [2.9, .08, .7, -.3, 2.3, -1.38, 0xF08A24], [4.42, .12, 2.12, 0, 2.42, 0, 0xF08A24], [1.0, .5, .04, 2.75, 1.25, -1.01, 0x9fc8ee]].forEach(q => { const m = new THREE.Mesh(B(q[0], q[1], q[2]), M(q[6])); m.position.set(tx + q[3], y + q[4], tz + q[5]); m.castShadow = true; g.add(m); });
+  [[-1.4, -1], [1.4, -1], [-1.4, 1], [2.7, -1], [2.7, 1], [1.4, 1]].slice(0, 4).forEach(w => { const m = new THREE.Mesh(B(.6, .6, .25), M(0x22262E)); m.position.set(tx + w[0], y + .3, tz + w[1] * 1.0); g.add(m); });
+  g.name = 'FOODTRUCK'; g.traverse(o => { if (o.isMesh) o.raycast = () => {}; }); OUTSET.add(g); }
 function cupSet(p, on) { if (!p.g) return; if (on && !p.cupM) { p.cupM = new THREE.Mesh(CUPG, CUPM); p.cupM.position.set(0, -11 * p.g.userData.px, 2.5 * p.g.userData.px); p.g.userData.rig.armR.children[0].add(p.cupM); } if (p.cupM) p.cupM.visible = !!on; p.cup = !!on; }
-function coffeeGoal(p) { const q = Math.floor(Math.random() * 3); return { fid: '1F', x: CAFE[0] + .3, z: CAFE[1] - .5 - q * .7, ry: 0, act: 'look', cafe: 1 }; }
+function coffeeGoal(p) { const q = Math.floor(Math.random() * 3); return { fid: '1F', x: ICAFE.q[q][0], z: ICAFE.q[q][1], ry: Math.PI, act: 'look', cafe: 1 }; }
 function busy(p) { return p.path.length > 0 || p.mode === 'wander' || p.mode === 'coffee' || (p.hold || 0) > 0; }
 function rinit(p) { if (p.hf) return; p.hf = p.fid; p.mode = 'desk'; p.path = []; p.dim = 0; }
 const fH = f => floorY[f];
@@ -336,8 +344,6 @@ function plan(p) { const g = p.g2; p.pend = 0; p.path = [];
   if (p.fid === g.fid && Math.hypot(p.x - g.x, p.z - g.z) < .05) { p.act = g.act; p.ry = g.ry; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; } p.act = 'walk'; p.seat = 0;
   if (Math.hypot(p.x - p.home[0], p.z - p.home[1]) < .05 && p.fid === p.hf) p.path.push([p.home[0], p.home[1] + 1.1]); // stand up and step out
   if (g.fid !== p.fid) { const sd = p.x >= 0 ? 1 : -1, ex = sd * 13.4, sx = sd * ELEV_X; p.path.push([ex, .9], { door: p.fid, sd }, [sx, .9], [sx, 0], { lift: g.fid, sd }, [sx, .9], [ex, .9], [ex, 2.2]); }
-  const out = z => z > 10.05; if (p.fid === '1F' && out(p.z) && !(g.fid === '1F' && out(g.z))) p.path.unshift([0, 11.4], [0, 8.6]);
-  if (g.fid === '1F' && out(g.z) && !(p.fid === '1F' && out(p.z))) p.path.push([0, 8.6], [0, 11.4]);
   if (g.act === 'sit' || g.act === 'rest') p.path.push([g.x, g.z + 1.1]); else if (g.act === 'msit') p.path.push([g.x, g.z + (g.ry ? .6 : -.6)]);
   p.path.push([g.x, g.z]); }
 function deskGoal(p, act) { return { fid: p.hf, x: p.home[0], z: p.home[1], ry: 0, act }; }
@@ -371,7 +377,7 @@ function applyStatus(list, names) { LAST_ST = list; if (names !== undefined) LAS
     if (p.want === 'work') goal(p, deskGoal(p, 'sit')); else if (p.want === 'meet') goal(p, MG[p.id]);
     else if (SHOT && /wander/.test(Q.get('mock') || '') && (p.wg = p.wg || { fid: p.hf, x: rnd(-12, 11), z: rnd(2.6, 7), ry: rnd(-3, 3), act: 'look' })) goal(p, p.wg);
     else if (SHOT && Q.get('mock') === 'cmp' && p.id === 'vera') goal(p, { fid: '3F', x: -9.6, z: 3.4, ry: .5, act: 'look' });
-    else if (SHOT && Q.get('mock') === 'coffee' && /^srg_0[1-4]$|^nova$/.test(p.id)) { const i = +p.id.slice(-1) || 0; goal(p, { fid: '1F', x: CAFE[0] + .3, z: CAFE[1] - .5 - (i % 4) * .7, ry: 0, act: 'look' }); if (i % 4 === 0) cupSet(p, 1); }
+    else if (SHOT && Q.get('mock') === 'coffee' && /^srg_0[1-4]$|^nova$/.test(p.id)) { const i = +p.id.slice(-1) || 0; goal(p, i % 4 === 0 ? { fid: '1F', x: ICAFE.pick[0], z: ICAFE.pick[1], ry: Math.PI, act: 'look' } : { fid: '1F', x: ICAFE.q[(i % 4) - 1][0], z: ICAFE.q[(i % 4) - 1][1], ry: Math.PI, act: 'look' }); if (i % 4 === 0) cupSet(p, 1); }
     else if (SHOT && Q.get('mock') === 'lift' && /^(vera|fx|srg_03)$/.test(p.id)) { const sd = p.id === 'srg_03' ? -1 : 1, k = { vera: 0, fx: 1, srg_03: 2 }[p.id]; goal(p, { fid: p.hf, x: sd * (ELEV_X - [1.2, .1, .05][k]), z: [.9, .2, .3][k], ry: [Math.PI / 2, 0, Math.PI][k], act: 'look' }); if (k) p.g.visible = true; doorOpen(p.hf, sd); DOPEN[p.hf + sd] = 1.3; doorTick(0); } else if (p.mode !== 'wander') goal(p, deskGoal(p, 'rest')); });
   if (SHOT) people(0, 0); }
 window.P7_applyStatus = applyStatus;
@@ -379,7 +385,7 @@ function dimSync(p) { const ms = p.g && p.g.userData.M; if (!ms) return; const k
   ms.forEach(m => { m.color.setRGB(k, k, k * 1.08); }); }
 function resStep(p, dt, t) { rinit(p);
   if (!p.g2) { p.g2 = deskGoal(p, p.want === undefined || p.want === null ? 'sit' : 'rest'); p.act = p.g2.act; p.seat = 1; }
-  if (p === RES[0]) doorTick(dt); if (p.fid === '1F') p.y = (p.z > 10.05 ? 0 : T); if (p.hold > 0) p.hold -= dt; if (SHOT) return p.path.length ? 'walk' : p.act;
+  if (p === RES[0]) doorTick(dt); if (p.hold > 0) p.hold -= dt; if (SHOT) return p.path.length ? 'walk' : p.act;
   if (p.pause > 0) { p.pause -= dt; return 'idle'; }
   if (p.path.length) { const w = p.path[0];
     if (w.door) { doorOpen(w.door, w.sd); p.path.shift(); p.pause = .7; return 'idle'; }
@@ -488,7 +494,7 @@ function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(),
     { let top = 0; Object.values(j.variants).forEach(v => v.parts.forEach(p => { top = Math.max(top, p.position[1] + p.size[1] / 2); })); BOT_S = 1.9 / top; }
     [['barista_1F', '1F'], ['patrol_2F', '2F'], ['patrol_3F', '3F'], ['patrol_4F', 'RF']].forEach(([k, fid], i) => { const v = j.variants[k]; if (!v || floorY[fid] === undefined) return;
       const b = { g: bot(v), fid, ph: i * 1.7, kind: i ? 'patrol' : 'barista', pause: rnd(1, 4) };
-      if (!i) { b.x = CAFE[0] + .3; b.z = CAFE[1] + 1.25; b.ry = Math.PI; b.y = 0; } else { b.y = floorY[fid] + T; const q = SHOT ? (Q.get('mock') === 'cmp' && fid === '3F' ? [-8.6, 3.4] : [1.5 + i, 4.2]) : ptarget(b); b.x = q[0]; b.z = q[1]; b.ry = SHOT ? -.5 : 0; b.to = ptarget(b); }
+      if (!i) { b.x = ICAFE.barista[0]; b.z = ICAFE.barista[1]; b.ry = 0; b.y = 0; } else { b.y = floorY[fid] + T; const q = SHOT ? (Q.get('mock') === 'cmp' && fid === '3F' ? [-8.6, 3.4] : [1.5 + i, 4.2]) : ptarget(b); b.x = q[0]; b.z = q[1]; b.ry = SHOT ? -.5 : 0; b.to = ptarget(b); }
       scene.add(b.g); BOTS.push(b); });
     botStep(0, 0); document.title = 'STATS=' + JSON.stringify(stats()); }).catch(() => {});
   window.botStep = botStep;
@@ -506,10 +512,11 @@ if (SHOT === 'close') { const y = floorY['3F']; controls.minDistance = 1; tweenT
 if (SHOT === 'floor3') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + 1.1, -1.5); camPos.set(-6.8, y + 3.6, 15.5); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'lobby') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; target.set(0, y + 2.8, 0); camPos.set(1.5, y + 3.8, 26); camera.position.copy(camPos); controls.target.copy(target); }
 if (Q.get('az') !== null) { const az = +Q.get('az'), po = Math.min(1.55, +Q.get('pol')), d = +Q.get('dist'); tweenT = 1; controls.update(); const tg = controls.target.clone(); camera.position.set(tg.x + d * Math.sin(po) * Math.sin(az), tg.y + d * Math.cos(po), tg.z + d * Math.sin(po) * Math.cos(az)); camera.lookAt(tg); }
-if (SHOT === 'bot1') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(6.3, y + 1.4, 14.3); camPos.set(3.6, y + 2.9, 9.8); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'bot1') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(11.5, y + 1.3, -8.3); camPos.set(10, y + 2.6, -3.8); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'cmp') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-9.1, y + 1, 3.4); camPos.set(-9.1, y + 1.6, 8.6); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'bot3') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(3.5, y + 1.1, 4.2); camPos.set(2.8, y + 2.1, 9); camera.position.copy(camPos); controls.target.copy(target); }
-if (SHOT === 'cafe') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(6, y + 1, 12); camPos.set(-1.5, y + 3, 15.5); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'door') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(19, y + 1.2, 1); camPos.set(25, y + 7, 17); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'cafe') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(11.3, y + 1.3, -6); camPos.set(5.5, y + 3.6, 1.5); camera.position.copy(camPos); controls.target.copy(target); }
 for (const [s, f] of [['lift3', '3F'], ['lift2', '2F']]) if (SHOT === s) { const y = floorY[f]; controls.minDistance = 1; tweenT = 1; controls.minPolarAngle = .3; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(s === 'lift2' ? -12.5 : 12.5, y + 1, .5); camPos.set(s === 'lift2' ? -6 : 6, y + 4, 10); camera.position.copy(camPos); controls.target.copy(target); }
 for (const [s, f] of [['wide2', '2F'], ['wide3', '3F'], ['wide4', 'RF']]) if (SHOT === s) { const y = floorY[f]; controls.minDistance = 1; tweenT = 1; const cx = +(Q.get('cx') || -1.5), cd = +(Q.get('cd') || 20.5); target.set(cx, y + 1.1, -1.5); camPos.set(cx, y + 4.6, cd); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'info') info.style.display = 'block';
