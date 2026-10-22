@@ -40,7 +40,8 @@ html='''<!doctype html>
 body.nogl #hint{display:none}
 .bub{position:absolute;transform:translate(-50%,-100%);padding:2px 8px;border-radius:8px;background:#F08A24;color:#fff;font-size:11px;white-space:nowrap;pointer-events:none;z-index:4;display:none}
 #tvk{position:absolute;right:10px;bottom:10px;z-index:6;width:28px;height:28px;border-radius:14px;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:13px;cursor:pointer;opacity:.45}#tvk:hover{opacity:1}#tvk.on{opacity:.9;background:rgba(240,138,36,.55)}
-.ntag{position:absolute;transform:translate(-50%,-100%);padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.88);color:#1F4E85;border:1px solid #F08A24;font-size:12px;white-space:nowrap;pointer-events:none;z-index:3;display:none}</style></head><body>
+.ntag{position:absolute;transform:translate(-50%,-100%);padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.88);color:#1F4E85;border:1px solid #F08A24;font-size:12px;white-space:nowrap;pointer-events:none;z-index:3;display:none}
+.ntag .sti{margin-left:5px;font-size:13px}.ntag .sti i{display:inline-block;width:10px;height:10px;border-radius:5px;margin-right:2px;vertical-align:0}</style></head><body>
 <div id="three"></div><button id="tvk" title="團隊" aria-label="團隊觀看">🔑</button><div id="hint">拖曳可微轉、滾輪縮放；點大樓看公司服務資訊</div>
 <div id="info" role="dialog"><h2>公司服務資訊<button id="ix" aria-label="關閉">×</button></h2><div class="b">
 <span class="ex">範例文字・待填入</span>

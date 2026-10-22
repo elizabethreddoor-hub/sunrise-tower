@@ -58,35 +58,103 @@ function setRoster(r) { const list = ((r && r.residents) || []).filter(a => a &&
   RES.forEach(p => { p.bubT = ''; }); if (LAST_ST) applyStatus(LAST_ST); }
 function poseBlock(p, m, t) { const g = p.g, R = g.userData.rig, px = g.userData.px; let sw = 0; g.position.set(p.x, p.y, p.z); g.rotation.y = p.ry;
   ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => R[k].rotation.set(0, 0, 0));
-  if (m === 'sit') { const ty = Math.sin(t * 9 + p.ph) * .12; g.position.y = p.y + .5 - 12 * px; R.legL.rotation.x = R.legR.rotation.x = -1.5; R.armL.rotation.x = -.9 + ty; R.armR.rotation.x = -.9 - ty; return; }
+  if (m === 'sit' || m === 'rest' || m === 'msit') { const ty = m === 'sit' ? Math.sin(t * 9 + p.ph) * .12 : 0; g.position.y = p.y + .5 - 12 * px; R.legL.rotation.x = R.legR.rotation.x = -1.5;
+    if (m === 'rest') { R.armL.rotation.x = R.armR.rotation.x = -.35 + Math.sin(t * 1.3 + p.ph) * .04; R.head.rotation.y = Math.sin(t * .4 + p.ph) * .3; }
+    else if (m === 'msit') { R.armL.rotation.x = -.7; R.armR.rotation.x = -.7 + Math.max(0, Math.sin(t * 2.2 + p.ph)) * -.6; R.head.rotation.x = Math.sin(t * 1.1 + p.ph) * .08; }
+    else { R.armL.rotation.x = -.9 + ty; R.armR.rotation.x = -.9 - ty; } return; }
+  if (m === 'talk') { g.position.y = p.y; const k = Math.sin(t * 2.4 + p.ph); R.armR.rotation.x = -.5 + Math.max(0, k) * -.7; R.armR.rotation.z = .15; R.armL.rotation.x = -.2 + Math.max(0, -k) * -.4; R.head.rotation.x = Math.sin(t * 1.5 + p.ph) * .1; return; }
   if (m === 'walk') sw = Math.sin(t * 7 + p.ph) * .5; else g.position.y = p.y + Math.sin(t * 1.6 + p.ph) * .01;
   R.legL.rotation.x = sw; R.legR.rotation.x = -sw; R.armL.rotation.x = -sw * .8; R.armR.rotation.x = sw * .8; }
-// live status: want = 'work' (seated), 'idle' (stands and strolls), 'away' (seated, dimmed). null = no status data -> default rhythm.
-// A change never jumps: walkers finish their walk back to the desk; sitters stand up only after the current arm swing ends.
+// live status (v5). want: 'work' = solo job, sits at own desk typing; 'meet' = discussion; 'idle' = no job: rests at desk and now and then
+// wanders (same floor, other office floors or the lobby, via the lifts), then returns. Rounds/2h timeout are decided by the backend.
+// 2 people: meet by a desk on the same floor; different floors -> the lower one goes up to the higher one's desk.
+// 3+: the meeting table on the highest member floor (6 chairs, extras stand around it). A new goal never cuts a walk: it applies at the next stop.
 let LAST_ST = null;
 let LAST_NM = null;
+const OFFICE_FIDS = ['2F', '3F', 'RF'], MT = [7, -2], AISLE = [-9, -6, -3];
+const MCH = [[5.6, -3.1, 0], [7, -3.1, 0], [8.4, -3.1, 0], [5.6, -.9, Math.PI], [7, -.9, Math.PI], [8.4, -.9, Math.PI]];
+const MST = [[4.25, -2, Math.PI / 2], [9.75, -2, -Math.PI / 2], [4.5, -3.9, .8], [9.5, -3.9, -.8], [4.5, -.1, 2.3], [9.5, -.1, -2.3], [7, -4.3, 0], [7, .3, Math.PI], [5.6, -4.4, .3], [8.4, -4.4, -.3]];
+const DOPEN = {};
+function doorOpen(fid, sd) { DOPEN[fid + sd] = 2.6; }
+function doorTick(dt) { Object.keys(DOPEN).forEach(k => { const fid = k.slice(0, 2), sd = +k.slice(2), L = DOORS[fid]; if (!L) { delete DOPEN[k]; return; } DOPEN[k] -= dt; const D0 = L[sd < 0 ? 0 : 1], o = DOPEN[k] > 0 ? Math.min(1, (2.6 - DOPEN[k]) * 3, DOPEN[k] * 3) : 0;
+  D0.pan.forEach((q, i) => { q.position.x = sd * ELEV_X + (i ? 1 : -1) * (.21 + .4 * o); }); doorSync(fid); if (DOPEN[k] <= 0) delete DOPEN[k]; }); }
+// 1F coffee counter (outside the entrance, lobby is full): one box counter + one box machine (24 tris). Cup = 1 tiny box carried in the right hand.
+const CAFE = [6, 13], CUPG = B(.09, .12, .09), CUPM = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+{ const y = floorY['1F'], g = new THREE.Group(); const c = new THREE.Mesh(B(2.4, 1.05, .6), new THREE.MeshLambertMaterial({ color: 0xF08A24 })); c.position.set(CAFE[0], y + .52, CAFE[1] + .55); c.castShadow = true; g.add(c);
+  const mm = new THREE.Mesh(B(.45, .5, .35), new THREE.MeshLambertMaterial({ color: 0x2F6FB3 })); mm.position.set(CAFE[0] + .95, y + 1.3, CAFE[1] + .6); g.add(mm); g.name = 'CAFE_1F'; scene.add(g); }
+function cupSet(p, on) { if (!p.g) return; if (on && !p.cupM) { p.cupM = new THREE.Mesh(CUPG, CUPM); p.cupM.position.set(0, -11 * p.g.userData.px, 2.5 * p.g.userData.px); p.g.userData.rig.armR.children[0].add(p.cupM); } if (p.cupM) p.cupM.visible = !!on; p.cup = !!on; }
+function coffeeGoal(p) { const q = Math.floor(Math.random() * 3); return { fid: '1F', x: CAFE[0] + .3, z: CAFE[1] - .5 - q * .7, ry: 0, act: 'look', cafe: 1 }; }
+function busy(p) { return p.path.length > 0 || p.mode === 'wander' || p.mode === 'coffee' || (p.hold || 0) > 0; }
+function rinit(p) { if (p.hf) return; p.hf = p.fid; p.mode = 'desk'; p.path = []; p.dim = 0; }
+const fH = f => floorY[f];
+function goal(p, g) { // g = {fid,x,z,ry,act:'sit'|'rest'|'msit'|'talk'|'look'}
+  const k = g.fid + ':' + g.x.toFixed(2) + ':' + g.z.toFixed(2) + ':' + g.act; if (p.gk === k && !g.force) { p.queued = null; return; } if (!SHOT && busy(p) && !g.force) { p.queued = g; return; } p.gk = k; p.g2 = g;
+  if (SHOT) { p.fid = g.fid; p.y = fH(g.fid) + T; p.x = g.x; p.z = g.z; p.ry = g.ry; p.act = g.act; p.path = []; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; }
+  p.queued = null; if (!p.path.length) plan(p); else p.pend = 1; }
+function plan(p) { const g = p.g2; p.pend = 0; p.path = [];
+  if (p.fid === g.fid && Math.hypot(p.x - g.x, p.z - g.z) < .05) { p.act = g.act; p.ry = g.ry; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; } p.act = 'walk'; p.seat = 0;
+  if (Math.hypot(p.x - p.home[0], p.z - p.home[1]) < .05 && p.fid === p.hf) p.path.push([p.home[0], p.home[1] + 1.1]); // stand up and step out
+  if (g.fid !== p.fid) { const sd = p.x >= 0 ? 1 : -1, ex = sd * 13.4, sx = sd * ELEV_X; p.path.push([ex, .9], { door: p.fid, sd }, [sx, .9], [sx, 0], { lift: g.fid, sd }, [sx, .9], [ex, .9], [ex, 2.2]); }
+  const out = z => z > 10.05; if (p.fid === '1F' && out(p.z) && !(g.fid === '1F' && out(g.z))) p.path.unshift([0, 11.4], [0, 8.6]);
+  if (g.fid === '1F' && out(g.z) && !(p.fid === '1F' && out(p.z))) p.path.push([0, 8.6], [0, 11.4]);
+  if (g.act === 'sit' || g.act === 'rest') p.path.push([g.x, g.z + 1.1]); else if (g.act === 'msit') p.path.push([g.x, g.z + (g.ry ? .6 : -.6)]);
+  p.path.push([g.x, g.z]); }
+function deskGoal(p, act) { return { fid: p.hf, x: p.home[0], z: p.home[1], ry: 0, act }; }
+function wanderGoal(p) { if (Math.random() < .3 && !p.cup) { p.mode = 'coffee'; return coffeeGoal(p); } const r = Math.random(), fid = r < .65 ? p.hf : r < .9 ? OFFICE_FIDS[Math.floor(Math.random() * 3)] : '1F';
+  const A = fid === '1F' ? { x: [-10, 10], z: [2, 7] } : { x: [-12, 11], z: [3, 7.5] }; return { fid, x: rnd(A.x[0], A.x[1]), z: rnd(A.z[0], A.z[1]), ry: rnd(-3, 3), act: 'look' }; }
+function meetGoals(list) { // union-find over declared partners
+  const P = {}, par = {}, f = a => par[a] === a ? a : (par[a] = f(par[a])), u = (a, b) => { par[a] = par[a] || a; par[b] = par[b] || b; par[f(a)] = f(b); };
+  RES.forEach(p => { P[p.id] = p; }); const M = [];
+  list.forEach(r => { if (r.state !== 'meet') return; const a = String(r.id).replace(/^home_/, ''); if (!P[a]) return; par[a] = par[a] || a; M.push(a);
+    (r.with || []).forEach(w => { w = String(w).replace(/^home_/, ''); if (P[w]) u(a, w); }); });
+  const USED = {}; const G = {}; Object.keys(par).forEach(a => { (G[f(a)] = G[f(a)] || []).push(a); }); const out = {};
+  Object.values(G).forEach(ids => { ids.sort(); const ps = ids.map(i => P[i]); rinit(ps[0]); ps.forEach(rinit);
+    const top = ps.reduce((a, b) => fH(b.hf) > fH(a.hf) ? b : a), fid = top.hf;
+    if (ids.length >= 3) { ids.forEach((id, i) => { const c = i < MCH.length ? MCH[i] : MST[(i - MCH.length) % MST.length]; out[id] = { fid, x: c[0], z: c[1], ry: c[2], act: i < MCH.length ? 'msit' : 'talk' }; }); return; }
+    if (ids.length === 1) { out[ids[0]] = deskGoal(P[ids[0]], 'sit'); return; }
+    const [a, b] = ps; let x, z;
+    if (a.hf === b.hf) { const mx = (a.home[0] + b.home[0]) / 2; x = AISLE.reduce((q, w) => Math.abs(w - mx) < Math.abs(q - mx) ? w : q); z = 2.7; }
+    else { x = AISLE.reduce((q, w) => Math.abs(w - top.home[0]) < Math.abs(q - top.home[0]) ? w : q); z = 2.7; }
+    while (USED[fid + ':' + x + ':' + z]) x += 1.6; USED[fid + ':' + x + ':' + z] = 1;
+    out[a.id] = { fid, x: x - .5, z, ry: Math.PI / 2, act: 'talk' }; out[b.id] = { fid, x: x + .5, z, ry: -Math.PI / 2, act: 'talk' }; });
+  return out; }
+// team-view status indicator beside the name tag: colour dot + tiny icon. Set at once on every status update (even mid-performance).
+const STI = { work: ['#2EAD5B', '⌨', '工作中'], meet: ['#2F80ED', '💬', '討論中'], idle: ['#9AA3AD', '☕', '待命'] };
+function tagSet(p, nm, st) { const k = nm + '|' + st; if (p.tagK === k) return; p.tagK = k; p.tag.textContent = '';
+  if (!nm) return; const n = document.createElement('span'); n.textContent = String(nm).slice(0, 20); p.tag.appendChild(n);
+  if (STI[st]) { const i = document.createElement('span'); i.className = 'sti'; i.title = STI[st][2]; i.innerHTML = '<i style="background:' + STI[st][0] + '"></i>'; i.appendChild(document.createTextNode(STI[st][1])); p.tag.appendChild(i); } }
 function applyStatus(list, names) { LAST_ST = list; if (names !== undefined) LAST_NM = names || null; const by = {}; (list || []).forEach(r => { by[String(r.id).replace(/^home_/, '')] = r; });
-  RES.forEach(p => { const r = by[p.id] || {}; const nm = r.name || (LAST_NM && LAST_NM[p.id]) || ''; if (p.tag.textContent !== nm) p.tag.textContent = String(nm).slice(0, 20); if (!r.id) { p.bubT = ''; return; } const live = r.fresh === 'live';
-    p.want = !live ? 'away' : (r.state === 'work' ? 'work' : 'idle');
-    p.bubT = live && r.activity ? String(r.activity).slice(0, 18) : '';
-    if (SHOT) { p.dim = p.want === 'away' ? 1 : 0; if (p.want === 'idle') { p.seat = 0; p.pause = 0; p.back = false; p.x = p.home[0] + 1.2; p.z = p.home[1] + 2.4; p.to = [p.x + .01, p.z]; p.ry = .6; } else { p.seat = 1; p.x = p.home[0]; p.z = p.home[1]; } dimSync(p); } });
+  const MG = meetGoals(list || []);
+  RES.forEach(p => { rinit(p); const r = by[p.id] || {}; const nm = r.name || (LAST_NM && LAST_NM[p.id]) || ''; if (!r.id) { tagSet(p, nm, ''); p.bubT = ''; return; } tagSet(p, nm, nm ? (r.state === 'work' ? 'work' : r.state === 'meet' ? 'meet' : 'idle') : '');
+    p.want = r.state === 'work' ? 'work' : r.state === 'meet' && MG[p.id] ? 'meet' : 'idle'; p.bubT = r.activity ? String(r.activity).slice(0, 18) : '';
+    if (p.want === 'work') goal(p, deskGoal(p, 'sit')); else if (p.want === 'meet') goal(p, MG[p.id]);
+    else if (SHOT && /wander/.test(Q.get('mock') || '') && (p.wg = p.wg || { fid: p.hf, x: rnd(-12, 11), z: rnd(2.6, 7), ry: rnd(-3, 3), act: 'look' })) goal(p, p.wg);
+    else if (SHOT && Q.get('mock') === 'cmp' && p.id === 'vera') goal(p, { fid: '3F', x: -9.6, z: 3.4, ry: .5, act: 'look' });
+    else if (SHOT && Q.get('mock') === 'coffee' && /^srg_0[1-4]$|^nova$/.test(p.id)) { const i = +p.id.slice(-1) || 0; goal(p, { fid: '1F', x: CAFE[0] + .3, z: CAFE[1] - .5 - (i % 4) * .7, ry: 0, act: 'look' }); if (i % 4 === 0) cupSet(p, 1); }
+    else if (SHOT && Q.get('mock') === 'lift' && /^(vera|fx|srg_03)$/.test(p.id)) { const sd = p.id === 'srg_03' ? -1 : 1, k = { vera: 0, fx: 1, srg_03: 2 }[p.id]; goal(p, { fid: p.hf, x: sd * (ELEV_X - [1.2, .1, .05][k]), z: [.9, .2, .3][k], ry: [Math.PI / 2, 0, Math.PI][k], act: 'look' }); if (k) p.g.visible = true; doorOpen(p.hf, sd); DOPEN[p.hf + sd] = 1.3; doorTick(0); } else if (p.mode !== 'wander') goal(p, deskGoal(p, 'rest')); });
   if (SHOT) people(0, 0); }
 window.P7_applyStatus = applyStatus;
 function dimSync(p) { const ms = p.g && p.g.userData.M; if (!ms) return; const k = 1 - .68 * p.dim;
   ms.forEach(m => { m.color.setRGB(k, k, k * 1.08); }); }
-function resStep(p, dt, t) {
-  if (p.want) { const tgt = p.want === 'away' ? 1 : 0; if (Math.abs(p.dim - tgt) > .001) { p.dim += Math.sign(tgt - p.dim) * Math.min(Math.abs(tgt - p.dim), dt / 1.5); dimSync(p); } }
-  if (p.want === 'idle' && p.seat) { const ph = (t * 9 + p.ph) % (Math.PI * 2); p.sitT = ph < .25 ? 0 : 1; }
-  if (p.want && p.want !== 'idle' && p.seat) p.sitT = 99;
-  if (p.want && p.want !== 'idle' && !p.seat && !p.back && p.pause <= 0) { p.back = true; p.to = [p.home[0], p.home[1] + 1.2]; }
-  if (p.want === 'idle' && !p.seat && p.back && p.pause <= 0 && Math.hypot(p.home[0] - p.x, p.home[1] + 1.2 - p.z) < .1) { p.back = false; p.pause = rnd(2, 5); p.to = [p.home[0] + rnd(-2.5, 2.5), p.home[1] + rnd(3, 5.5)]; return 'idle'; }
- // seated at desk; now and then stand, stroll a little, come back
-  if (p.seat) { p.sitT -= dt; p.ry = 0; if (p.sitT <= 0 && !SHOT) { p.seat = 0; p.to = [p.home[0] + rnd(-2.5, 2.5), p.home[1] + rnd(3, 5.5)]; p.back = false; } return 'sit'; }
+function resStep(p, dt, t) { rinit(p);
+  if (!p.g2) { p.g2 = deskGoal(p, p.want === undefined || p.want === null ? 'sit' : 'rest'); p.act = p.g2.act; p.seat = 1; }
+  if (p === RES[0]) doorTick(dt); if (p.fid === '1F') p.y = (p.z > 10.05 ? 0 : T); if (p.hold > 0) p.hold -= dt; if (SHOT) return p.path.length ? 'walk' : p.act;
   if (p.pause > 0) { p.pause -= dt; return 'idle'; }
-  const dx = p.to[0] - p.x, dz = p.to[1] - p.z, d = Math.hypot(dx, dz);
-  if (d < .08) { if (p.want === 'idle' && !p.back) { p.pause = rnd(2, 5); p.to = [p.home[0] + rnd(-2.5, 2.5), p.home[1] + rnd(3, 5.5)]; if (Math.random() < .3) { p.back = true; p.to = [p.home[0], p.home[1] + 1.2]; } return 'idle'; } if (p.back) { p.x = p.home[0]; p.z = p.home[1]; p.seat = 1; p.sitT = rnd(20, 45); return 'sit'; } p.back = true; p.pause = rnd(2, 4); p.to = [p.home[0], p.home[1] + 1.2]; return 'idle'; }
-  if (p.back && Math.hypot(p.home[0] - p.x, p.home[1] + 1.2 - p.z) < .1) p.to = p.home.slice();
-  const v = Math.min(d, .8 * dt); p.x += dx / d * v; p.z += dz / d * v; const ry = Math.atan2(dx, dz); p.ry += Math.atan2(Math.sin(ry - p.ry), Math.cos(ry - p.ry)) * Math.min(1, dt * 6); return 'walk'; }
+  if (p.path.length) { const w = p.path[0];
+    if (w.door) { doorOpen(w.door, w.sd); p.path.shift(); p.pause = .7; return 'idle'; }
+    if (w.lift) { if (!p.inLift) { p.inLift = 1; p.g.visible = false; p.pause = 2.2; return 'idle'; } p.inLift = 0; p.g.visible = true; p.fid = w.lift; p.y = fH(w.lift) + T; doorOpen(w.lift, w.sd); p.path.shift(); p.pause = .7; p.ry = Math.PI; return 'idle'; }
+    const dx = w[0] - p.x, dz = w[1] - p.z, d = Math.hypot(dx, dz);
+    if (d < .06) { p.path.shift(); if (p.pend) { plan(p); return 'idle'; } if (!p.path.length) { p.x = w[0]; p.z = w[1]; p.ry = p.g2.ry; p.act = p.g2.act; p.seat = /sit|rest/.test(p.act) ? 1 : 0; p.stay = p.g2.cafe ? 5 : rnd(4, 9); p.sitT = rnd(25, 70); p.hold = 2.5; } return 'walk'; }
+    const v = Math.min(d, .9 * dt); p.x += dx / d * v; p.z += dz / d * v; const ry = Math.atan2(dx, dz); p.ry += Math.atan2(Math.sin(ry - p.ry), Math.cos(ry - p.ry)) * Math.min(1, dt * 6); return 'walk'; }
+  // arrived. idle: rest at desk; after a while wander (1-2 stops), then come back
+  if (p.queued && (p.mode === 'desk' || !p.mode) && p.hold <= 0) { const q = p.queued; q.force = 1; goal(p, q); q.force = 0; return 'walk'; }
+  if (p.mode === 'coffee' && p.act === 'look') { p.stay -= dt; if (p.stay <= 2.5 && !p.cup) cupSet(p, 1); if (p.stay <= 0) { p.mode = 'desk'; const q = p.queued; goal(p, Object.assign(q && /sit|rest/.test(q.act) ? q : deskGoal(p, 'rest'), { force: 1 })); if (q && !/sit|rest/.test(q.act)) p.queued = q; } return 'idle'; }
+  if (p.cup && p.seat) { p.cupT = (p.cupT || 20) - dt; if (p.cupT <= 0) { cupSet(p, 0); p.cupT = 0; } }
+  if (p.mode === 'wander' && p.act === 'look' && p.queued) { p.stay -= dt; if (p.stay <= 0) { p.mode = 'desk'; goal(p, Object.assign(p.queued, { force: 1 })); } return 'idle'; }
+  if (p.want !== 'work' && p.want !== 'meet') {
+    if (p.mode === 'wander' && p.act === 'look') { p.stay -= dt; if (p.stay <= 0) { if (Math.random() < .4) goal(p, Object.assign(wanderGoal(p), { force: 1 })); else { p.mode = 'desk'; goal(p, Object.assign(deskGoal(p, 'rest'), { force: 1 })); } } return 'idle'; }
+    if (p.act === 'rest' || p.act === 'sit') { p.sitT -= dt; if (p.act === 'sit' && p.want === 'idle') { p.act = 'rest'; p.g2 = deskGoal(p, 'rest'); p.gk = ''; } if (p.sitT <= 0) { p.mode = 'wander'; goal(p, Object.assign(wanderGoal(p), { force: 1 })); } } }
+  return p.act === 'look' ? 'idle' : p.act; }
 function people(dt, t) { PEOPLE.concat(RES).forEach((p, i) => { let sw = 0;
   if (p.res) { const m = resStep(p, dt, t); if (p.g) poseBlock(p, m, t); return; }
   if (p.pause > 0) p.pause -= dt; else { const dx = p.to[0] - p.x, dz = p.to[1] - p.z, d = Math.hypot(dx, dz);
@@ -115,7 +183,7 @@ const clock = new THREE.Clock(); let last = 0;
 setRoster(ROSTER_FALLBACK);
 fetch('roster.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(r => { if (r && r.residents) { setRoster(r); people(0, 0); } }).catch(() => {});
 for (let k = 0; k < 90; k++) people(1 / 30, k / 30);
-function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(), dt = Math.min(.1, t - last); last = t; if (!SHOT) people(dt, t);
+function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(), dt = Math.min(.1, t - last); last = t; if (!SHOT) people(dt, t); if (window.botStep) botStep(SHOT ? 0 : dt, SHOT ? 0 : t);
   if (tweenT < 1) { tweenT = Math.min(1, tweenT + .045); const k = 1 - Math.pow(1 - tweenT, 3); camera.position.lerpVectors(from.p, camPos, k); controls.target.lerpVectors(from.t, target, k); }
   controls.update(); if (camera.position.y < 1.2) { camera.position.y = 1.2; } tags(); composer.render(); }
 { // city skyline: flat silhouettes in 3 depths, unlit, no shadows, not clickable
@@ -136,12 +204,50 @@ function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(),
   const gm = new THREE.MeshStandardMaterial({ color: 0x3E4C5E, roughness: 1 });
   const gp = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400).rotateX(-Math.PI / 2), gm); gp.position.y = -.21; gp.receiveShadow = true; gp.raycast = () => {}; gp.name = 'GROUND_far'; scene.add(gp);
   scene.fog = new THREE.Fog(0x1B3D66, 300, 900); }
+
+{ // floating robot butlers (NPC, not residents: no tags/status, not in backend). Geometry from site/butler_bot.json (v0.1).
+  // chamferBox = 3 crossed boxes (36 tris, reads as a bevel); eyes: #FF8A1F standard + emissive 0.35 (below the bloom threshold).
+  const MC = {}, mt = (c, m) => { const k = c + (m || ''); if (!MC[k]) MC[k] = m === 'eye' ? new THREE.MeshStandardMaterial({ color: 0xFF8A1F, emissive: 0xFF8A1F, emissiveIntensity: .35, roughness: .4 }) : new THREE.MeshStandardMaterial({ color: new THREE.Color(c), roughness: .55, metalness: 0 }); return MC[k]; };
+  function geo(p) { const [w, h, d] = p.size;
+    if (p.type === 'chamferBox') { const b = p.bevel || .05; return mergeGeometries([B(w, h - 2 * b, d - 2 * b), B(w - 2 * b, h, d - 2 * b), B(w - 2 * b, h - 2 * b, d)].map(g => { g.deleteAttribute('uv'); return g; })); }
+    if (p.type === 'cyl8') return new THREE.CylinderGeometry(w / 2, w / 2, h, 8);
+    if (p.type === 'wedge') { const g = new THREE.BufferGeometry(), x = w / 2, y = h / 2, z = d / 2, v = [[-x, y, z], [x, y, z], [0, -y, z], [-x, y, -z], [x, y, -z], [0, -y, -z]], ix = [0, 2, 1, 3, 4, 5, 0, 1, 4, 0, 4, 3, 1, 2, 5, 1, 5, 4, 2, 0, 3, 2, 3, 5];
+      g.setAttribute('position', new THREE.Float32BufferAttribute(ix.flatMap(i => v[i]), 3)); g.computeVertexNormals(); return g; }
+    const g = B(w, h, d); return g; }
+  function bot(v) { const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const arms = [];
+    v.parts.forEach(p => { const m = new THREE.Mesh(geo(p), mt(p.color, /^eye/.test(p.name) ? 'eye' : '')); m.position.fromArray(p.position); const r = p.rotation_deg || [0, 0, 0]; m.rotation.set(r[0] * Math.PI / 180, r[1] * Math.PI / 180, r[2] * Math.PI / 180); m.castShadow = true; m.raycast = () => {}; body.add(m); if (/^(arm|hand|armband)/.test(p.name)) arms.push([m, p.name.slice(-1), m.rotation.x]); });
+    body.scale.setScalar(BOT_S); g.userData = { body, arms }; return g; }
+  const BOTS = []; window.BOTS = BOTS; let BOT_S = 1; // one scale for all 4: top of head = resident height (1.9 m)
+  const near = (fid, x, z, r) => RES.some(p => p.fid === fid && Math.hypot(p.x - x, p.z - z) < r);
+  function ptarget(b) { for (let k = 0; k < 20; k++) { const x = rnd(-12, 11), z = rnd(-6.5, 7.5); if (!near(b.fid, x, z, 1.4) && !(x > 3.5 && x < 10.5 && z > -4.8 && z < .8) && !(x < -3.4 && z < 2)) return [x, z]; } return [rnd(-2, 2), rnd(3, 7)]; }
+  fetch('butler_bot.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (!j || !j.variants) return;
+    { let top = 0; Object.values(j.variants).forEach(v => v.parts.forEach(p => { top = Math.max(top, p.position[1] + p.size[1] / 2); })); BOT_S = 1.9 / top; }
+    [['barista_1F', '1F'], ['patrol_2F', '2F'], ['patrol_3F', '3F'], ['patrol_4F', 'RF']].forEach(([k, fid], i) => { const v = j.variants[k]; if (!v || floorY[fid] === undefined) return;
+      const b = { g: bot(v), fid, ph: i * 1.7, kind: i ? 'patrol' : 'barista', pause: rnd(1, 4) };
+      if (!i) { b.x = CAFE[0] + .3; b.z = CAFE[1] + 1.25; b.ry = Math.PI; b.y = 0; } else { b.y = floorY[fid] + T; const q = SHOT ? (Q.get('mock') === 'cmp' && fid === '3F' ? [-8.6, 3.4] : [1.5 + i, 4.2]) : ptarget(b); b.x = q[0]; b.z = q[1]; b.ry = SHOT ? -.5 : 0; b.to = ptarget(b); }
+      scene.add(b.g); BOTS.push(b); });
+    botStep(0, 0); document.title = 'STATS=' + JSON.stringify(stats()); }).catch(() => {});
+  window.botStep = botStep;
+  function botStep(dt, t) { BOTS.forEach(b => {
+    if (b.kind === 'patrol' && dt) { if (b.pause > 0) b.pause -= dt; else { const dx = b.to[0] - b.x, dz = b.to[1] - b.z, d = Math.hypot(dx, dz);
+        if (d < .1) { b.pause = rnd(2, 6); b.to = ptarget(b); } else { const v = Math.min(d, .55 * dt), nx = b.x + dx / d * v, nz = b.z + dz / d * v;
+          if (near(b.fid, nx, nz, .9)) { b.pause = 1.2; b.to = ptarget(b); } else { b.x = nx; b.z = nz; const ry = Math.atan2(dx, dz); b.ry += Math.atan2(Math.sin(ry - b.ry), Math.cos(ry - b.ry)) * Math.min(1, dt * 3); } } } }
+    const u = b.g.userData; b.g.position.set(b.x, b.y, b.z); b.g.rotation.y = b.ry + (b.kind === 'barista' ? Math.sin(t * .5 + b.ph) * .25 : 0);
+    u.body.position.y = (SHOT ? 0 : 1) * Math.sin(t * 2 * Math.PI / 2.4 + b.ph) * .03;
+    u.arms.forEach(([m, s, r0]) => { m.rotation.x = r0 + (b.kind === 'barista' && s === 'R' ? 0 : Math.sin(t * 1.8 + b.ph + (s === 'L' ? 0 : 1.5)) * .087); }); }); }
+}
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
 if (SHOT === 'close') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + .9, -2.6); camPos.set(-7.5, y + 3.4, 9.5); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'floor3') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + 1.1, -1.5); camPos.set(-6.8, y + 3.6, 15.5); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'lobby') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; target.set(0, y + 2.8, 0); camPos.set(1.5, y + 3.8, 26); camera.position.copy(camPos); controls.target.copy(target); }
 if (Q.get('az') !== null) { const az = +Q.get('az'), po = Math.min(1.55, +Q.get('pol')), d = +Q.get('dist'); tweenT = 1; controls.update(); const tg = controls.target.clone(); camera.position.set(tg.x + d * Math.sin(po) * Math.sin(az), tg.y + d * Math.cos(po), tg.z + d * Math.sin(po) * Math.cos(az)); camera.lookAt(tg); }
+if (SHOT === 'bot1') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(6.3, y + 1.4, 14.3); camPos.set(3.6, y + 2.9, 9.8); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'cmp') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-9.1, y + 1, 3.4); camPos.set(-9.1, y + 1.6, 8.6); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'bot3') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(3.5, y + 1.1, 4.2); camPos.set(2.8, y + 2.1, 9); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'cafe') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(6, y + 1, 12); camPos.set(-1.5, y + 3, 15.5); camera.position.copy(camPos); controls.target.copy(target); }
+for (const [s, f] of [['lift3', '3F'], ['lift2', '2F']]) if (SHOT === s) { const y = floorY[f]; controls.minDistance = 1; tweenT = 1; controls.minPolarAngle = .3; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(s === 'lift2' ? -12.5 : 12.5, y + 1, .5); camPos.set(s === 'lift2' ? -6 : 6, y + 4, 10); camera.position.copy(camPos); controls.target.copy(target); }
+for (const [s, f] of [['wide2', '2F'], ['wide3', '3F'], ['wide4', 'RF']]) if (SHOT === s) { const y = floorY[f]; controls.minDistance = 1; tweenT = 1; const cx = +(Q.get('cx') || -1.5), cd = +(Q.get('cd') || 20.5); target.set(cx, y + 1.1, -1.5); camPos.set(cx, y + 4.6, cd); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'info') info.style.display = 'block';
 document.title = 'STATS=' + JSON.stringify(stats());
 loop();

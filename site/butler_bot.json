@@ -1,0 +1,1757 @@
+{
+ "name": "butler_bot_v0.1",
+ "project": "P007",
+ "status": "concept",
+ "units": "metres",
+ "up": "+Y",
+ "front": "+Z",
+ "origin": "地面中心",
+ "notes": [
+  "chamferBox = 圓角方塊（單段倒角）；wedge = 倒三角柱；cyl8 = 八邊形扁柱",
+  "眼睛用 MeshBasicMaterial 亮橘（不受光、不發光、emissive 為 0）；是否改自發光待使用者批准",
+  "浮動：整體 y 方向 ±0.03 m、週期 2.4 s 上下飄；手臂可另有 ±5° 擺動"
+ ],
+ "variants": {
+  "barista_1F": {
+   "faces_tri": 272,
+   "parts": [
+    {
+     "name": "base_plate",
+     "type": "box",
+     "size": [
+      0.44,
+      0.04,
+      0.34
+     ],
+     "position": [
+      0,
+      0.32,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "body",
+     "type": "chamferBox",
+     "size": [
+      0.56,
+      0.62,
+      0.44
+     ],
+     "position": [
+      0,
+      0.6499999999999999,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "bevel": 0.06,
+     "faces_tri": 44,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "neck",
+     "type": "box",
+     "size": [
+      0.2,
+      0.04,
+      0.2
+     ],
+     "position": [
+      0,
+      0.98,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "collar",
+     "type": "box",
+     "size": [
+      0.46,
+      0.05,
+      0.36
+     ],
+     "position": [
+      0,
+      0.9450000000000001,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F2862E",
+     "colorKey": "orange",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "neckerchief",
+     "type": "wedge",
+     "size": [
+      0.22,
+      0.14,
+      0.03
+     ],
+     "position": [
+      0,
+      0.8500000000000001,
+      0.235
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F2862E",
+     "colorKey": "orange",
+     "note": "倒三角，尖端朝下",
+     "faces_tri": 8,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "head",
+     "type": "chamferBox",
+     "size": [
+      0.5,
+      0.36,
+      0.4
+     ],
+     "position": [
+      0,
+      1.18,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "bevel": 0.05,
+     "faces_tri": 44,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "face_screen",
+     "type": "box",
+     "size": [
+      0.4,
+      0.22,
+      0.02
+     ],
+     "position": [
+      0,
+      1.18,
+      0.205
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#14161C",
+     "colorKey": "screen",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.2,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "eye_L",
+     "type": "box",
+     "size": [
+      0.07,
+      0.07,
+      0.01
+     ],
+     "position": [
+      -0.09,
+      1.19,
+      0.218
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#FF8A1F",
+     "colorKey": "eye",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshBasicMaterial",
+      "roughness": null,
+      "metalness": null,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "eye_R",
+     "type": "box",
+     "size": [
+      0.07,
+      0.07,
+      0.01
+     ],
+     "position": [
+      0.09,
+      1.19,
+      0.218
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#FF8A1F",
+     "colorKey": "eye",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshBasicMaterial",
+      "roughness": null,
+      "metalness": null,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "arm_L",
+     "type": "box",
+     "size": [
+      0.12,
+      0.34,
+      0.12
+     ],
+     "position": [
+      -0.36,
+      0.72,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "hand_L",
+     "type": "box",
+     "size": [
+      0.12,
+      0.08,
+      0.12
+     ],
+     "position": [
+      -0.36,
+      0.51,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "arm_R",
+     "type": "box",
+     "size": [
+      0.12,
+      0.34,
+      0.12
+     ],
+     "position": [
+      0.36,
+      0.8200000000000001,
+      0.12
+     ],
+     "rotation_deg": [
+      -70,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "hand_R",
+     "type": "box",
+     "size": [
+      0.12,
+      0.08,
+      0.12
+     ],
+     "position": [
+      0.36,
+      0.8,
+      0.32
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "tray",
+     "type": "cyl8",
+     "size": [
+      0.36,
+      0.02,
+      0.36
+     ],
+     "position": [
+      0.36,
+      0.855,
+      0.34
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "note": "八角扁柱，直徑 0.36",
+     "faces_tri": 32,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "cup",
+     "type": "box",
+     "size": [
+      0.07,
+      0.09,
+      0.07
+     ],
+     "position": [
+      0.34,
+      0.9099999999999999,
+      0.34
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F7F8FA",
+     "colorKey": "cup",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.4,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "coffee_top",
+     "type": "box",
+     "size": [
+      0.05,
+      0.005,
+      0.05
+     ],
+     "position": [
+      0.34,
+      0.9570000000000001,
+      0.34
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#5A3A26",
+     "colorKey": "coffee",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.3,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    }
+   ]
+  },
+  "patrol_2F": {
+   "faces_tri": 240,
+   "parts": [
+    {
+     "name": "base_plate",
+     "type": "box",
+     "size": [
+      0.44,
+      0.04,
+      0.34
+     ],
+     "position": [
+      0,
+      0.32,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "body",
+     "type": "chamferBox",
+     "size": [
+      0.56,
+      0.62,
+      0.44
+     ],
+     "position": [
+      0,
+      0.6499999999999999,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "bevel": 0.06,
+     "faces_tri": 44,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "neck",
+     "type": "box",
+     "size": [
+      0.2,
+      0.04,
+      0.2
+     ],
+     "position": [
+      0,
+      0.98,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "collar",
+     "type": "box",
+     "size": [
+      0.46,
+      0.05,
+      0.36
+     ],
+     "position": [
+      0,
+      0.9450000000000001,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F2862E",
+     "colorKey": "orange",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "neckerchief",
+     "type": "wedge",
+     "size": [
+      0.22,
+      0.14,
+      0.03
+     ],
+     "position": [
+      0,
+      0.8500000000000001,
+      0.235
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F2862E",
+     "colorKey": "orange",
+     "note": "倒三角，尖端朝下",
+     "faces_tri": 8,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "head",
+     "type": "chamferBox",
+     "size": [
+      0.5,
+      0.36,
+      0.4
+     ],
+     "position": [
+      0,
+      1.18,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "bevel": 0.05,
+     "faces_tri": 44,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "face_screen",
+     "type": "box",
+     "size": [
+      0.4,
+      0.22,
+      0.02
+     ],
+     "position": [
+      0,
+      1.18,
+      0.205
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#14161C",
+     "colorKey": "screen",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.2,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "eye_L",
+     "type": "box",
+     "size": [
+      0.07,
+      0.07,
+      0.01
+     ],
+     "position": [
+      -0.09,
+      1.19,
+      0.218
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#FF8A1F",
+     "colorKey": "eye",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshBasicMaterial",
+      "roughness": null,
+      "metalness": null,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "eye_R",
+     "type": "box",
+     "size": [
+      0.07,
+      0.07,
+      0.01
+     ],
+     "position": [
+      0.09,
+      1.19,
+      0.218
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#FF8A1F",
+     "colorKey": "eye",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshBasicMaterial",
+      "roughness": null,
+      "metalness": null,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "arm_L",
+     "type": "box",
+     "size": [
+      0.12,
+      0.34,
+      0.12
+     ],
+     "position": [
+      -0.36,
+      0.72,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "hand_L",
+     "type": "box",
+     "size": [
+      0.12,
+      0.08,
+      0.12
+     ],
+     "position": [
+      -0.36,
+      0.51,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "arm_R",
+     "type": "box",
+     "size": [
+      0.12,
+      0.34,
+      0.12
+     ],
+     "position": [
+      0.36,
+      0.72,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "hand_R",
+     "type": "box",
+     "size": [
+      0.12,
+      0.08,
+      0.12
+     ],
+     "position": [
+      0.36,
+      0.51,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "armband_L",
+     "type": "box",
+     "size": [
+      0.14,
+      0.04,
+      0.14
+     ],
+     "position": [
+      -0.36,
+      0.8,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F2862E",
+     "colorKey": "orange",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "armband_R",
+     "type": "box",
+     "size": [
+      0.14,
+      0.04,
+      0.14
+     ],
+     "position": [
+      0.36,
+      0.8,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F2862E",
+     "colorKey": "orange",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    }
+   ]
+  },
+  "patrol_3F": {
+   "faces_tri": 240,
+   "parts": [
+    {
+     "name": "base_plate",
+     "type": "box",
+     "size": [
+      0.44,
+      0.04,
+      0.34
+     ],
+     "position": [
+      0,
+      0.32,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "body",
+     "type": "chamferBox",
+     "size": [
+      0.56,
+      0.62,
+      0.44
+     ],
+     "position": [
+      0,
+      0.6499999999999999,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "bevel": 0.06,
+     "faces_tri": 44,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "neck",
+     "type": "box",
+     "size": [
+      0.2,
+      0.04,
+      0.2
+     ],
+     "position": [
+      0,
+      0.98,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "collar",
+     "type": "box",
+     "size": [
+      0.46,
+      0.05,
+      0.36
+     ],
+     "position": [
+      0,
+      0.9450000000000001,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F2862E",
+     "colorKey": "orange",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "neckerchief",
+     "type": "wedge",
+     "size": [
+      0.22,
+      0.14,
+      0.03
+     ],
+     "position": [
+      0,
+      0.8500000000000001,
+      0.235
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F2862E",
+     "colorKey": "orange",
+     "note": "倒三角，尖端朝下",
+     "faces_tri": 8,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "head",
+     "type": "chamferBox",
+     "size": [
+      0.5,
+      0.36,
+      0.4
+     ],
+     "position": [
+      0,
+      1.18,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "bevel": 0.05,
+     "faces_tri": 44,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "face_screen",
+     "type": "box",
+     "size": [
+      0.4,
+      0.22,
+      0.02
+     ],
+     "position": [
+      0,
+      1.18,
+      0.205
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#14161C",
+     "colorKey": "screen",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.2,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "eye_L",
+     "type": "box",
+     "size": [
+      0.07,
+      0.07,
+      0.01
+     ],
+     "position": [
+      -0.09,
+      1.19,
+      0.218
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#FF8A1F",
+     "colorKey": "eye",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshBasicMaterial",
+      "roughness": null,
+      "metalness": null,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "eye_R",
+     "type": "box",
+     "size": [
+      0.07,
+      0.07,
+      0.01
+     ],
+     "position": [
+      0.09,
+      1.19,
+      0.218
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#FF8A1F",
+     "colorKey": "eye",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshBasicMaterial",
+      "roughness": null,
+      "metalness": null,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "arm_L",
+     "type": "box",
+     "size": [
+      0.12,
+      0.34,
+      0.12
+     ],
+     "position": [
+      -0.36,
+      0.72,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "hand_L",
+     "type": "box",
+     "size": [
+      0.12,
+      0.08,
+      0.12
+     ],
+     "position": [
+      -0.36,
+      0.51,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "arm_R",
+     "type": "box",
+     "size": [
+      0.12,
+      0.34,
+      0.12
+     ],
+     "position": [
+      0.36,
+      0.72,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "hand_R",
+     "type": "box",
+     "size": [
+      0.12,
+      0.08,
+      0.12
+     ],
+     "position": [
+      0.36,
+      0.51,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "armband_L",
+     "type": "box",
+     "size": [
+      0.14,
+      0.04,
+      0.14
+     ],
+     "position": [
+      -0.36,
+      0.8,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#5BB8F0",
+     "colorKey": "orange",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "armband_R",
+     "type": "box",
+     "size": [
+      0.14,
+      0.04,
+      0.14
+     ],
+     "position": [
+      0.36,
+      0.8,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#5BB8F0",
+     "colorKey": "orange",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    }
+   ]
+  },
+  "patrol_4F": {
+   "faces_tri": 240,
+   "parts": [
+    {
+     "name": "base_plate",
+     "type": "box",
+     "size": [
+      0.44,
+      0.04,
+      0.34
+     ],
+     "position": [
+      0,
+      0.32,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "body",
+     "type": "chamferBox",
+     "size": [
+      0.56,
+      0.62,
+      0.44
+     ],
+     "position": [
+      0,
+      0.6499999999999999,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "bevel": 0.06,
+     "faces_tri": 44,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "neck",
+     "type": "box",
+     "size": [
+      0.2,
+      0.04,
+      0.2
+     ],
+     "position": [
+      0,
+      0.98,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "collar",
+     "type": "box",
+     "size": [
+      0.46,
+      0.05,
+      0.36
+     ],
+     "position": [
+      0,
+      0.9450000000000001,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F2862E",
+     "colorKey": "orange",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "neckerchief",
+     "type": "wedge",
+     "size": [
+      0.22,
+      0.14,
+      0.03
+     ],
+     "position": [
+      0,
+      0.8500000000000001,
+      0.235
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F2862E",
+     "colorKey": "orange",
+     "note": "倒三角，尖端朝下",
+     "faces_tri": 8,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "head",
+     "type": "chamferBox",
+     "size": [
+      0.5,
+      0.36,
+      0.4
+     ],
+     "position": [
+      0,
+      1.18,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "bevel": 0.05,
+     "faces_tri": 44,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "face_screen",
+     "type": "box",
+     "size": [
+      0.4,
+      0.22,
+      0.02
+     ],
+     "position": [
+      0,
+      1.18,
+      0.205
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#14161C",
+     "colorKey": "screen",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.2,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "eye_L",
+     "type": "box",
+     "size": [
+      0.07,
+      0.07,
+      0.01
+     ],
+     "position": [
+      -0.09,
+      1.19,
+      0.218
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#FF8A1F",
+     "colorKey": "eye",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshBasicMaterial",
+      "roughness": null,
+      "metalness": null,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "eye_R",
+     "type": "box",
+     "size": [
+      0.07,
+      0.07,
+      0.01
+     ],
+     "position": [
+      0.09,
+      1.19,
+      0.218
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#FF8A1F",
+     "colorKey": "eye",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshBasicMaterial",
+      "roughness": null,
+      "metalness": null,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "arm_L",
+     "type": "box",
+     "size": [
+      0.12,
+      0.34,
+      0.12
+     ],
+     "position": [
+      -0.36,
+      0.72,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "hand_L",
+     "type": "box",
+     "size": [
+      0.12,
+      0.08,
+      0.12
+     ],
+     "position": [
+      -0.36,
+      0.51,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "arm_R",
+     "type": "box",
+     "size": [
+      0.12,
+      0.34,
+      0.12
+     ],
+     "position": [
+      0.36,
+      0.72,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#F4F6F8",
+     "colorKey": "white",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.55,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "hand_R",
+     "type": "box",
+     "size": [
+      0.12,
+      0.08,
+      0.12
+     ],
+     "position": [
+      0.36,
+      0.51,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#2F6FD6",
+     "colorKey": "blue",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.5,
+      "metalness": 0.1,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "armband_L",
+     "type": "box",
+     "size": [
+      0.14,
+      0.04,
+      0.14
+     ],
+     "position": [
+      -0.36,
+      0.8,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#FFB36B",
+     "colorKey": "orange",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    },
+    {
+     "name": "armband_R",
+     "type": "box",
+     "size": [
+      0.14,
+      0.04,
+      0.14
+     ],
+     "position": [
+      0.36,
+      0.8,
+      0
+     ],
+     "rotation_deg": [
+      0,
+      0,
+      0
+     ],
+     "color": "#FFB36B",
+     "colorKey": "orange",
+     "faces_tri": 12,
+     "material": {
+      "type": "MeshStandardMaterial",
+      "roughness": 0.7,
+      "metalness": 0.0,
+      "emissive": "#000000"
+     }
+    }
+   ]
+  }
+ }
+}

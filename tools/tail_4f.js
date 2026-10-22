@@ -12,11 +12,10 @@
       const p = { res: true, id: String(a.id || a.skin), fid: F4, sc: 1, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: y4 + T, seat: 1, sitT: rnd(st[0], st[1]), to: null, pause: 0 };
       p.g = buildBlock(a.skin, 1); if (!p.g) return; 
       const tag = document.createElement('div'); tag.className = 'ntag'; box.appendChild(tag); p.tag = tag; RES4.push(p); });
-    if (LAST_ST || LAST_NM) applyStatus(LAST_ST || [], LAST_NM);
     if (RES4.length) { LY = new THREE.InstancedMesh(lanyard(RES4[0].g.userData.px), GOLD, RES4.length); LY.frustumCulled = false; LY.castShadow = true; scene.add(LY); }
-    RES.push(...RES4); }
+    RES.push(...RES4); if (LAST_ST || LAST_NM) applyStatus(LAST_ST || [], LAST_NM); }
   LYSYNC = () => { if (!LY) return; RES4.forEach((p, i) => LY.setMatrixAt(i, p.g.userData.rig.torso.matrixWorld)); LY.instanceMatrix.needsUpdate = true; };
-  const _sr = setRoster; setRoster = r => { for (let i = RES.length - 1; i >= 0; i--) if (RES4.includes(RES[i])) RES.splice(i, 1); _sr(r); RES.push(...RES4); };
+  const _sr = setRoster; setRoster = r => { for (let i = RES.length - 1; i >= 0; i--) if (RES4.includes(RES[i])) RES.splice(i, 1); _sr(r); RES.push(...RES4); if (LAST_ST) applyStatus(LAST_ST); };
   fetch('roster_4f.json', { cache: 'no-store' }).then(x => x.ok ? x.json() : null).then(r => { if (r) { for (let i = RES.length - 1; i >= 0; i--) if (RES4.includes(RES[i])) RES.splice(i, 1); add4(r); people(0, 0); document.title = 'STATS=' + JSON.stringify(stats()) + ' R4=' + RES4.length; } }).catch(() => {});
 }
 for (const [s, f] of [['floor4', 'RF'], ['floor2', '2F']]) if (SHOT === s) { const y = floorY[f]; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + 1.1, -1.5); camPos.set(-6.8, y + 3.6, 15.5); camera.position.copy(camPos); controls.target.copy(target); }
