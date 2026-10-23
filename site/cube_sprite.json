@@ -1,0 +1,66 @@
+{
+  "name": "資料方塊精靈 Cube Sprite",
+  "version": "0.1",
+  "status": "concept",
+  "approver": "庭彣",
+  "geometry": {
+    "main_cube": "2.0×2.0×2.0 單位(約30cm)，12面",
+    "screen": "正面嵌入深色螢幕 1.44×1.0，12面",
+    "eyes": "2個小方塊 0.24×0.28，各12面",
+    "orbit_cubes": "4個 0.44 小方塊，軌道半徑1.9，各12面",
+    "total_faces": 96,
+    "limit": 120
+  },
+  "palettes": {
+    "FX": {
+      "name": "外匯小精靈",
+      "body": "#B5C94A",
+      "edge": "#6E9E36",
+      "orbit": [
+        "#E6CF5C",
+        "#8FC24A",
+        "#F2E08A",
+        "#5E8F2E"
+      ],
+      "screen": "#14161C",
+      "eye": "#F7E36E"
+    },
+    "KOC": {
+      "name": "KOC小精靈",
+      "body": "#E49BCF",
+      "edge": "#9566D8",
+      "orbit": [
+        "#F5C4E8",
+        "#B88AF0",
+        "#D86FB8",
+        "#7A52C4"
+      ],
+      "screen": "#14161C",
+      "eye": "#FF86DC"
+    }
+  },
+  "emissive": {
+    "eyes": 0.35,
+    "range": "0.3–0.4",
+    "bloom": false,
+    "note": "材質不吃光時眼色提亮一階"
+  },
+  "animation": {
+    "idle": {
+      "main_bob": "上下浮動 ±0.08 單位，週期 3s",
+      "orbit": "小方塊繞轉 1圈/6s，各自上下相位差",
+      "eyes": "每 4–6s 眨眼一次(縮為細線 0.15s)"
+    },
+    "working": {
+      "orbit": "1圈/1.5s",
+      "main_bob": "±0.04 / 1.5s",
+      "eyes": "亮度維持0.4"
+    }
+  },
+  "forbidden_colors": [
+    "#2A8C9E",
+    "#8C040C",
+    "#C0C0C0",
+    "#D4A944"
+  ]
+}

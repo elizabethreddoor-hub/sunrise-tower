@@ -26,13 +26,6 @@
    "skin": "contract"
   },
   {
-   "id": "fx",
-   "floor": 3,
-   "desk": 7,
-   "skin": "fx",
-   "scale": 0.5
-  },
-  {
    "id": "nova",
    "floor": 3,
    "desk": 8,

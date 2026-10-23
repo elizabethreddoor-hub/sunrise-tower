@@ -270,7 +270,7 @@ for (let i = 0; i < NP; i++) { const p = { fid: FL[i], sc: 1.15, ph: Math.random
 const o3 = new THREE.Object3D(), pv = new THREE.Object3D(); o3.add(pv);
 function place(im, i, p, lx, ly, swing, part) { o3.position.set(p.x, p.y, p.z); o3.rotation.set(0, p.ry, 0); o3.scale.setScalar(p.sc); const h = PART[part][0].parameters.height;
   pv.position.set(lx, ly + h, 0); pv.rotation.set(swing, 0, 0); pv.updateMatrix(); o3.updateMatrix(); const m = new THREE.Matrix4().makeTranslation(0, -h / 2, 0); im.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(o3.matrix, pv.matrix).multiply(m)); }
-const ROSTER_FALLBACK = {"residents": [{"id": "mira", "floor": 3, "desk": 1, "skin": "mira"}, {"id": "vera", "floor": 3, "desk": 2, "skin": "vera"}, {"id": "stylist", "floor": 3, "desk": 4, "skin": "stylist"}, {"id": "contract", "floor": 3, "desk": 5, "skin": "contract"}, {"id": "fx", "floor": 3, "desk": 7, "skin": "fx", "scale": 0.5}, {"id": "nova", "floor": 3, "desk": 8, "skin": "nova"}]};
+const ROSTER_FALLBACK = {"residents": [{"id": "mira", "floor": 3, "desk": 1, "skin": "mira"}, {"id": "vera", "floor": 3, "desk": 2, "skin": "vera"}, {"id": "stylist", "floor": 3, "desk": 4, "skin": "stylist"}, {"id": "contract", "floor": 3, "desk": 5, "skin": "contract"}, {"id": "nova", "floor": 3, "desk": 8, "skin": "nova"}]};
 const FLOOR_ID = { 1: '1F', 2: '2F', 3: '3F', 4: 'RF' }, RES = [];
 const SKIN_UV = { head: [0, 0, 8, 8, 8], hat: [32, 0, 8, 8, 8], body: [16, 16, 8, 12, 4], jacket: [16, 32, 8, 12, 4], rarm: [40, 16, 4, 12, 4], rsleeve: [40, 32, 4, 12, 4],
   larm: [32, 48, 4, 12, 4], lsleeve: [48, 48, 4, 12, 4], rleg: [0, 16, 4, 12, 4], rpants: [0, 32, 4, 12, 4], lleg: [16, 48, 4, 12, 4], lpants: [0, 48, 4, 12, 4] };
@@ -518,6 +518,7 @@ function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(),
     u.body.position.y = (SHOT ? 0 : 1) * Math.sin(t * 2 * Math.PI / 2.4 + b.ph) * .03;
     u.arms.forEach(([m, s, r0]) => { m.rotation.x = r0 + (b.kind === 'barista' && s === 'R' ? 0 : Math.sin(t * 1.8 + b.ph + (s === 'L' ? 0 : 1.5)) * .087); }); }); }
 }
+import('./cube_sprite.js').then(m => m.initCubeSprites({ THREE, scene, floorY, T, deskPos, SHOT, Q, camera, controls, camPos, target }));
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
 if (SHOT === 'close') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + .9, -2.6); camPos.set(-7.5, y + 3.4, 9.5); camera.position.copy(camPos); controls.target.copy(target); }
