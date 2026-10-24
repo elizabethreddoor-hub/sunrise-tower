@@ -519,6 +519,7 @@ function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(),
     u.arms.forEach(([m, s, r0]) => { m.rotation.x = r0 + (b.kind === 'barista' && s === 'R' ? 0 : Math.sin(t * 1.8 + b.ph + (s === 'L' ? 0 : 1.5)) * .087); }); }); }
 }
 import('./cube_sprite.js').then(m => m.initCubeSprites({ THREE, scene, floorY, T, deskPos, SHOT, Q, camera, controls, camPos, target }));
+import('./lightstrip.js').then(m => m.initLightStrip({ THREE, scene, floorY, SHOT, Q, camera, controls, camPos, target })).then(() => import('./contract_board.js').then(m => m.initContractBoard({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target })));
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
 if (SHOT === 'close') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + .9, -2.6); camPos.set(-7.5, y + 3.4, 9.5); camera.position.copy(camPos); controls.target.copy(target); }

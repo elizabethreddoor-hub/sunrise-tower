@@ -1,2 +1,2 @@
 // P007 live-status config. The Web App URL is public (read-only state); no keys here.
-window.P7_STATUS = { enabled: true, url: 'https://script.google.com/macros/s/AKfycbzD4PtD0L_GSS_sQ58A_RdBCAPq-BIo6eRFCEoQg3U9YEA__OdYGmK2cZY-wVlid00iog/exec', intervalMs: 30000 };
+window.P7_STATUS = { enabled: true, url: 'https://script.google.com/macros/s/AKfycbzD4PtD0L_GSS_sQ58A_RdBCAPq-BIo6eRFCEoQg3U9YEA__OdYGmK2cZY-wVlid00iog/exec', intervalMs: 30000, contractBoardUrl: 'https://script.google.com/macros/s/AKfycbzD4PtD0L_GSS_sQ58A_RdBCAPq-BIo6eRFCEoQg3U9YEA__OdYGmK2cZY-wVlid00iog/exec' };
