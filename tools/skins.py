@@ -1,9 +1,9 @@
-# Port P005 block skins to P007: recolour clothing toward blue/white/orange, keep faces/hair
+# Port Mira 大樓 block skins to 日上昇大樓: recolour clothing toward blue/white/orange, keep faces/hair
 from PIL import Image
 import json
 SRC='/workspace/aiob/skins/%s_skin_v0.1.png'
 H=lambda s:tuple(int(s[i:i+2],16) for i in (1,3,5))
-MAP={ # source clothing colour -> P007 colour (shade kept by delta)
+MAP={ # source clothing colour -> 日上昇大樓 colour (shade kept by delta)
  'mira':{},  # qipao #8C040C is her identity and reserved for her; untouched
  'nova':{'#B89B72':'#F08A24','#5A4032':'#1F4E85'},
  'vera':{'#E8837A':'#F08A24','#D9706A':'#C96A14'},

@@ -3,7 +3,7 @@ L=open('/workspace/aiob/gas/tower3d.html',encoding='utf-8').read().split('\n')
 def R(a,b): return L[a-1:b]
 core = R(3,9)+R(11,58)+R(116,206)+R(213,268)+R(892,892)
 js='\n'.join(core)
-# P005 specifics
+# Mira 大樓 specifics
 js=js.replace("window.TOWER3D_FAIL = true; window.towerSetMode && window.towerSetMode('2d'); ","document.body.classList.add('nogl'); ")
 js=js.replace('miraFloorY','topFloorY')
 exec(open('/workspace/p007/tools/restyle.py',encoding='utf-8').read())

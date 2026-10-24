@@ -1,4 +1,4 @@
-# P007 v2: blue/white/orange, glass on 3 sides, uniform 30x20 floors, heights x1.3, plain offices upstairs
+# 日上昇大樓 v2: blue/white/orange, glass on 3 sides, uniform 30x20 floors, heights x1.3, plain offices upstairs
 def rep(a,b,cnt=1):
     global js
     assert js.count(a)>=1, a
