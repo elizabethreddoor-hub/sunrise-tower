@@ -1,4 +1,4 @@
-// P007 團隊模式：內部工作看板、對話面板、角色今日紀錄。只在輸入團隊觀看碼後出現；資料都從後端用觀看憑證即時取得，這個檔案本身不含任何對話或敏感資料。
+// 日上昇大樓 團隊模式：內部工作看板、對話面板、角色今日紀錄。只在輸入團隊觀看碼後出現；資料都從後端用觀看憑證即時取得，這個檔案本身不含任何對話或敏感資料。
 (function () {
   var Q = new URLSearchParams(location.search), D = document, on = false, tab = Q.get('panel') === 'chat' ? 'chat' : 'board', speak = null, data = { board: null, log: [] }, filt = '', busy = false, SPK = 'p7_sp';
   // 發言裝置憑證：這台裝置成功驗證過一次發言密碼後才顯示發言區（365 天）。密碼本身不存。
