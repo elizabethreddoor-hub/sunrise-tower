@@ -13,8 +13,9 @@ body.nogl #hint{display:none}
 #tvk{position:absolute;right:10px;bottom:10px;z-index:6;width:28px;height:28px;border-radius:14px;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:13px;cursor:pointer;opacity:.45}#tvk:hover{opacity:1}#tvk.on{opacity:.9;background:rgba(240,138,36,.55)}
 .ntag{position:absolute;transform:translate(-50%,-100%);padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.88);color:#1F4E85;border:1px solid #F08A24;font-size:12px;white-space:nowrap;pointer-events:none;z-index:3;display:none}
 .say{position:absolute;transform:translate(-50%,-100%);max-width:200px;padding:4px 10px;border-radius:12px;background:#fff;color:#1F4E85;border:1.5px solid #2F80ED;font-size:12px;line-height:1.35;pointer-events:none;z-index:4;display:none;white-space:normal;text-align:center}.say:after{content:'';position:absolute;left:50%;bottom:-7px;margin-left:-6px;border:6px solid transparent;border-top-color:#2F80ED;border-bottom:0}
-.ntag .sti{margin-left:5px;font-size:13px}.ntag .sti i{display:inline-block;width:10px;height:10px;border-radius:5px;margin-right:2px;vertical-align:0}</style></head><body>
-<div id="three"></div><button id="tvk" title="團隊" aria-label="團隊觀看">🔑</button><div id="hint">拖曳可微轉、滾輪縮放；點大樓看公司服務資訊</div>
+.ntag .sti{margin-left:5px;font-size:13px}.ntag .sti i{display:inline-block;width:10px;height:10px;border-radius:5px;margin-right:2px;vertical-align:0}#fbar{position:absolute;left:10px;top:50%;transform:translateY(-50%);z-index:6;display:flex;flex-direction:column;gap:6px}#fbar button{min-width:52px;min-height:40px;padding:6px 10px;border-radius:10px;border:1px solid rgba(233,199,123,.6);background:rgba(28,26,28,.72);color:#f3ece2;font-size:14px;cursor:pointer;touch-action:manipulation}#fbar button.on{background:rgba(240,138,36,.85);color:#fff;border-color:#F08A24}
+</style></head><body>
+<div id="three"></div><div id="fbar" role="group" aria-label="樓層"><button data-f="RF">4F</button><button data-f="3F">3F</button><button data-f="2F">2F</button><button data-f="1F">1F</button><button data-f="all" class="on">全景</button></div><button id="tvk" title="團隊" aria-label="團隊觀看">🔑</button><div id="hint">拖曳可微轉、滾輪縮放；點大樓看公司服務資訊</div>
 <div id="info" role="dialog"><h2>公司服務資訊<button id="ix" aria-label="關閉">×</button></h2><div class="b">
 <span class="ex">範例文字・待填入</span>
 <p>【範例】這裡放公司簡介，一到兩句話說明我們是誰、做什麼。</p>
@@ -425,6 +426,10 @@ function tags() { if (LYSYNC) LYSYNC(); const ff = focusFid(); RES.forEach(p => 
     if (on) { if (p.sayEl.textContent !== p.sayT) p.sayEl.textContent = p.sayT; p.sayEl.style.left = p.tag.style.left; p.sayEl.style.top = (parseFloat(p.tag.style.top) - 26 - (p.bubT ? 24 : 0)) + 'px'; } } if (!p.bub) return; const sb = show && p.bubT; p.bub.style.display = sb ? 'block' : 'none'; if (sb) { if (p.bub.textContent !== p.bubT) p.bub.textContent = p.bubT; p.bub.style.left = p.tag.style.left; p.bub.style.top = (parseFloat(p.tag.style.top) - 24) + 'px'; } }); }
 
 const info = document.getElementById('info'); document.getElementById('ix').onclick = () => info.style.display = 'none';
+function focusFloor(fid) { if (fid === 'all' || floorY[fid] === undefined) { camHome(towerH); const k = new THREE.Vector3().copy(target), c = new THREE.Vector3().copy(camPos); camera.position.copy(from.p); controls.target.copy(from.t); target.copy(k); camPos.copy(c); tweenT = 0; return; }
+  const y = floorY[fid], h = fid === '1F' ? FH1 : FH, w = fid === '1F' ? W1 : W, a = innerWidth / Math.max(1, innerHeight), tv = Math.tan(camera.fov * Math.PI / 360), th = tv * a;
+  const dist = Math.max((h + 1) / 2 / tv, w * .34 / th) + D / 2; setCam(new THREE.Vector3(0, y + h * .45, 0), dist, false, a < 1); }
+document.querySelectorAll('#fbar button').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); document.querySelectorAll('#fbar button').forEach(x => x.classList.toggle('on', x === b)); focusFloor(b.dataset.f); }));
 const ray = new THREE.Raycaster(), mv = new THREE.Vector2(); let down = null;
 renderer.domElement.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
 renderer.domElement.addEventListener('pointerup', e => { if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return; const r = renderer.domElement.getBoundingClientRect();
@@ -466,7 +471,7 @@ setRoster(ROSTER_FALLBACK);
 fetch('roster.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(r => { if (r && r.residents) { setRoster(r); people(0, 0); } }).catch(() => {});
 for (let k = 0; k < 90; k++) people(1 / 30, k / 30);
 function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(), dt = Math.min(.1, t - last); last = t; if (!SHOT) people(dt, t); if (window.botStep) botStep(SHOT ? 0 : dt, SHOT ? 0 : t);
-  if (tweenT < 1) { tweenT = Math.min(1, tweenT + .045); const k = 1 - Math.pow(1 - tweenT, 3); camera.position.lerpVectors(from.p, camPos, k); controls.target.lerpVectors(from.t, target, k); }
+  if (tweenT < 1) { tweenT = Math.min(1, tweenT + dt / .8); const k = 1 - Math.pow(1 - tweenT, 3); camera.position.lerpVectors(from.p, camPos, k); controls.target.lerpVectors(from.t, target, k); }
   controls.update(); if (camera.position.y < 1.2) { camera.position.y = 1.2; } tags(); composer.render(); }
 { // city skyline: flat silhouettes in 3 depths, unlit, no shadows, not clickable
   let sd = 7; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
@@ -533,6 +538,7 @@ if (SHOT === 'door') { const y = floorY['1F']; controls.minDistance = 1; tweenT 
 if (SHOT === 'cafe') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(11.3, y + 1.3, -6); camPos.set(5.5, y + 3.6, 1.5); camera.position.copy(camPos); controls.target.copy(target); }
 for (const [s, f] of [['lift3', '3F'], ['lift2', '2F']]) if (SHOT === s) { const y = floorY[f]; controls.minDistance = 1; tweenT = 1; controls.minPolarAngle = .3; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(s === 'lift2' ? -12.5 : 12.5, y + 1, .5); camPos.set(s === 'lift2' ? -6 : 6, y + 4, 10); camera.position.copy(camPos); controls.target.copy(target); }
 for (const [s, f] of [['wide2', '2F'], ['wide3', '3F'], ['wide4', 'RF']]) if (SHOT === s) { const y = floorY[f]; controls.minDistance = 1; tweenT = 1; const cx = +(Q.get('cx') || -1.5), cd = +(Q.get('cd') || 20.5); target.set(cx, y + 1.1, -1.5); camPos.set(cx, y + 4.6, cd); camera.position.copy(camPos); controls.target.copy(target); }
+if (Q.get('floor')) setTimeout(() => { const b = document.querySelector('#fbar button[data-f="' + Q.get('floor') + '"]'); if (b) b.click(); }, 300);
 if (SHOT === 'info') info.style.display = 'block';
 document.title = 'STATS=' + JSON.stringify(stats());
 loop();
