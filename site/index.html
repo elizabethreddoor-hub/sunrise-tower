@@ -274,7 +274,7 @@ for (let i = 0; i < NP; i++) { const p = { fid: FL[i], sc: 1.15, ph: Math.random
 const o3 = new THREE.Object3D(), pv = new THREE.Object3D(); o3.add(pv);
 function place(im, i, p, lx, ly, swing, part) { o3.position.set(p.x, p.y, p.z); o3.rotation.set(0, p.ry, 0); o3.scale.setScalar(p.sc); const h = PART[part][0].parameters.height;
   pv.position.set(lx, ly + h, 0); pv.rotation.set(swing, 0, 0); pv.updateMatrix(); o3.updateMatrix(); const m = new THREE.Matrix4().makeTranslation(0, -h / 2, 0); im.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(o3.matrix, pv.matrix).multiply(m)); }
-const ROSTER_FALLBACK = {"residents": [{"id": "mira", "floor": 3, "desk": 1, "skin": "mira"}, {"id": "vera", "floor": 3, "desk": 2, "skin": "vera"}, {"id": "stylist", "floor": 3, "desk": 4, "skin": "stylist"}, {"id": "contract", "floor": 3, "desk": 5, "skin": "contract"}, {"id": "contract@5F", "floor": 5, "desk": 4, "skin": "contract"}, {"id": "engineer", "floor": 5, "desk": 7, "skin": "engineer"}, {"id": "nova", "floor": 3, "desk": 8, "skin": "nova"}]};
+const ROSTER_FALLBACK = {"residents": [{"id": "mira", "floor": 3, "desk": 1, "skin": "mira"}, {"id": "vera", "floor": 3, "desk": 2, "skin": "vera"}, {"id": "stylist", "floor": 3, "desk": 4, "skin": "stylist"}, {"id": "contract", "floor": 5, "desk": 4, "skin": "contract"}, {"id": "engineer", "floor": 5, "desk": 7, "skin": "engineer"}, {"id": "nova", "floor": 3, "desk": 8, "skin": "nova"}]};
 const FLOOR_ID = { 1: '1F', 2: '2F', 3: '3F', 4: 'RF', 5: '5F' }, RES = [];
 const SKIN_UV = { head: [0, 0, 8, 8, 8], hat: [32, 0, 8, 8, 8], body: [16, 16, 8, 12, 4], jacket: [16, 32, 8, 12, 4], rarm: [40, 16, 4, 12, 4], rsleeve: [40, 32, 4, 12, 4],
   larm: [32, 48, 4, 12, 4], lsleeve: [48, 48, 4, 12, 4], rleg: [0, 16, 4, 12, 4], rpants: [0, 32, 4, 12, 4], lleg: [16, 48, 4, 12, 4], lpants: [0, 48, 4, 12, 4] };
@@ -377,7 +377,7 @@ function tagSet(p, nm, st) { const k = nm + '|' + st; if (p.tagK === k) return; 
   if (STI[st]) { const i = document.createElement('span'); i.className = 'sti'; i.title = STI[st][2]; i.innerHTML = '<i style="background:' + STI[st][0] + '"></i>'; i.appendChild(document.createTextNode(STI[st][1])); p.tag.appendChild(i); } }
 function applyStatus(list, names) { LAST_ST = list; if (names !== undefined) LAST_NM = names || null; const by = {}; (list || []).forEach(r => { by[String(r.id).replace(/^home_/, '')] = r; });
   const MG = meetGoals(list || []);
-  RES.forEach(p => { rinit(p); const bid = p.id.split('@')[0], r = by[bid] || {}; const nm = r.name || (LAST_NM && LAST_NM[bid]) || ''; if (!r.id) { tagSet(p, nm, ''); p.bubT = ''; return; } tagSet(p, nm, nm ? (r.state === 'work' ? 'work' : r.state === 'meet' ? 'meet' : 'idle') : '');
+  RES.forEach(p => { rinit(p); const r = by[p.id] || {}; const nm = r.name || (LAST_NM && LAST_NM[p.id]) || ''; if (!r.id) { tagSet(p, nm, ''); p.bubT = ''; return; } tagSet(p, nm, nm ? (r.state === 'work' ? 'work' : r.state === 'meet' ? 'meet' : 'idle') : '');
     p.want = r.state === 'work' ? 'work' : r.state === 'meet' && MG[p.id] ? 'meet' : 'idle'; p.bubT = r.activity ? String(r.activity).slice(0, 18) : '';
     if (p.want === 'work') goal(p, deskGoal(p, 'sit')); else if (p.want === 'meet') goal(p, MG[p.id]);
     else if (SHOT && /wander/.test(Q.get('mock') || '') && (p.wg = p.wg || { fid: p.hf, x: rnd(-12, 11), z: rnd(2.6, 7), ry: rnd(-3, 3), act: 'look' })) goal(p, p.wg);
@@ -440,7 +440,7 @@ renderer.domElement.addEventListener('pointerup', e => { if (!down || Math.hypot
   if (document.body.classList.contains('team')) { // team mode: no visitor info; clicking a character opens its 今日紀錄
     const hit = ray.intersectObjects(RES.filter(p => p.g && p.g.visible).map(p => p.g), true)[0]; if (!hit) return;
     const p = RES.find(q => { let o = hit.object; while (o) { if (o === q.g) return true; o = o.parent; } return false; });
-    if (p && window.P7_pick) { const r = (LAST_ST || []).find(x => String(x.id).replace(/^home_/, '') === p.id.split('@')[0]); window.P7_pick(r ? r.id : p.id); } return; }
+    if (p && window.P7_pick) { const r = (LAST_ST || []).find(x => String(x.id).replace(/^home_/, '') === p.id); window.P7_pick(r ? r.id : p.id); } return; }
   if (ray.intersectObject(world, true).length) info.style.display = 'block'; });
 window.P7_pickShot = id => { if (window.P7_pick) window.P7_pick(id); };
 

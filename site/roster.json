@@ -21,8 +21,8 @@
   },
   {
    "id": "contract",
-   "floor": 3,
-   "desk": 5,
+   "floor": 5,
+   "desk": 4,
    "skin": "contract"
   },
   {
@@ -30,12 +30,6 @@
    "floor": 3,
    "desk": 8,
    "skin": "nova"
-  },
-  {
-   "id": "contract@5F",
-   "floor": 5,
-   "desk": 4,
-   "skin": "contract"
   },
   {
    "id": "engineer",
