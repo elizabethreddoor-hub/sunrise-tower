@@ -365,23 +365,30 @@ function lobbyChain(x, z) { // 從某點走到大廳走道的路徑點（最後�
   if (z < -9.85) return [[-12, -10.7], [-12, -8.4], [-12, -2], [-12, HALL_Z]];
   if (x > 8.3 && z < -1.5) return [[10.9, -2], [10.9, HALL_Z]];
   return [[x, HALL_Z]]; }
-const ROUTE_DBG = Q.get('route') ? [] : null;
+const ROUTE_DBG = Q.get('route') ? [] : null; window.P7_routes = ROUTE_DBG ? [] : null;
+const CZ = fid => fid === '5F' ? .3 : 2.7; // 各樓層的橫向走道（5F 書房長桌在 z 1.7–3.3，改走 z 0.3）
+const SPD = Math.min(20, Math.max(1, +(Q.get('spd') || 1))); // 除錯：spd=倍速（驗證路線用）
+const backOf = p => p.cube ? 1.4 : .6; // 座位後方的走道距離（人＝椅子後 0.6 m；方塊精靈的位置在桌子上方，退 1.4 m 到椅子後）
 function plan(p) { const g = p.g2; p.pend = 0; p.path = [];
   if (p.fid === g.fid && Math.hypot(p.x - g.x, p.z - g.z) < .05) { p.act = g.act; p.ry = g.ry; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; } p.act = 'walk'; p.seat = 0;
   const exitM = p.atMeet && p.mc && p.fid === MFID; if (exitM) p.path.push(...meetExit(p.mc)); p.atMeet = g.meet ? 1 : 0; p.mc = g.meet ? [g.x, g.z, g.ry] : null; // 從會議桌離開：先退回椅子後方→繞出桌子→走道
-  if (Math.hypot(p.x - p.home[0], p.z - p.home[1]) < .05 && p.fid === p.hf) p.path.push([p.home[0], p.home[1] + 1.1]); // stand up and step out
-  const dst = []; if (g.act === 'sit' || g.act === 'rest') dst.push([g.x, g.z + 1.1]); else if (g.act === 'msit') dst.push([g.x, g.z + (g.ry ? .6 : -.6)]); dst.push([g.x, g.z]);
+  const atHome = Math.hypot(p.x - p.home[0], p.z - p.home[1]) < .05 && p.fid === p.hf;
+  if (atHome) p.path.push([p.home[0], p.home[1] - backOf(p)]); // v0.4：起身往椅子後方退（不再穿過自己的桌子）
+  const dst = []; if (g.act === 'sit' || g.act === 'rest') dst.push([g.x, g.z - backOf(p)]); else if (g.act === 'msit') dst.push([g.x, g.z + (g.ry ? .6 : -.6)]); dst.push([g.x, g.z]);
   if (g.fid !== p.fid) { const sd = p.x >= 0 ? 1 : -1, ex = sd * 13.4, sx = sd * ELEV_X;
     if (p.fid === '1F') p.path.push(...lobbyChain(p.x, p.z), [sd * 12, HALL_Z]);
+    else if (atHome) { const ax = nearAisle(p.x), cz = CZ(p.fid); p.path.push([ax, p.home[1] - backOf(p)], [ax, cz], [ex, cz]); } // v0.4：離開座位先走桌間走道→樓層橫向走道→電梯口，不斜穿桌子
+    else if (exitM) p.path.push([ex, CZ(p.fid)]);
     p.path.push([ex, .9], { door: p.fid, sd }, [sx, .9], [sx, 0], { lift: g.fid, sd }, [sx, .9], [ex, .9]);
-    if (g.fid === '1F') p.path.push([sd * 12, HALL_Z], ...lobbyChain(g.x, g.z).reverse()); else { p.path.push([ex, 2.2]); if (g.via) g.via.forEach(v => p.path.push(v)); } }
+    if (g.fid === '1F') p.path.push([sd * 12, HALL_Z], ...lobbyChain(g.x, g.z).reverse()); else { const cz = CZ(g.fid); p.path.push([ex, cz]); if (g.via) g.via.forEach(v => p.path.push(v)); else if (/sit|rest/.test(g.act)) { const ax = nearAisle(g.x); p.path.push([ax, cz], [ax, g.z - backOf(p)]); } } }
   else if (g.fid === '1F' && lobbyZone(p.x, p.z) === lobbyZone(g.x, g.z) && lobbyZone(g.x, g.z) !== 'hall') { /* 同一區（門外、咖啡吧、廁所）直接走 */ }
   else if (g.fid === '1F') { const a = lobbyChain(p.x, p.z), b = lobbyChain(g.x, g.z).reverse(); if (a.length > 1 || b.length > 1) p.path.push(...a, ...b); }
   else if (g.via) g.via.forEach(v => p.path.push(v));
-  else if (exitM && /sit|rest/.test(g.act)) { const ax = nearAisle(g.x); p.path.push([ax, 2.7], [ax, g.z + 1.1]); } // 開完會回座位：沿走道再進座位排
+  else if (exitM && /sit|rest/.test(g.act)) { const ax = nearAisle(g.x); p.path.push([ax, 2.7], [ax, g.z - backOf(p)]); } // 開完會回座位：沿走道再進座位排
   p.path.push(...dst);
-  if (ROUTE_DBG && (p.fid === '1F' || g.fid === '1F')) { const y = fH('1F') + .12, pts = [[p.x, p.z]].concat(p.path.filter(w => Array.isArray(w))).map(w => new THREE.Vector3(w[0], y, w[1]));
-    const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xFF2D55, depthTest: false })); ln.renderOrder = 999; scene.add(ln); ROUTE_DBG.push(ln); } }
+  if (ROUTE_DBG) window.P7_routes.push({ id: p.id, from: p.fid, to: g.fid, start: [p.x, p.z], path: p.path.map(w => Array.isArray(w) ? w.slice() : Object.assign({}, w)) });
+  if (ROUTE_DBG) { let f = p.fid, seg = [[p.x, p.z]]; const segs = []; p.path.forEach(w => { if (w.lift) { segs.push([f, seg]); f = w.lift; seg = []; } else if (Array.isArray(w)) seg.push(w); }); segs.push([f, seg]);
+    segs.forEach(([ff, sg]) => { if (sg.length < 2) return; const y = fH(ff) + T + .06, ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(sg.map(w => new THREE.Vector3(w[0], y, w[1]))), new THREE.LineBasicMaterial({ color: g.meet ? 0x00B050 : 0xFF2D55, depthTest: false })); ln.renderOrder = 999; scene.add(ln); ROUTE_DBG.push(ln); }); } }
 function deskGoal(p, act) { return { fid: p.hf, x: p.home[0], z: p.home[1], ry: 0, act }; }
 function wanderGoal(p) { if (Math.random() < .3 && !p.cup) { p.mode = 'coffee'; return coffeeGoal(p); } const r = Math.random(), fid = r < .65 ? p.hf : r < .9 ? OFFICE_FIDS[Math.floor(Math.random() * 3)] : '1F';
   const A = fid === '1F' ? { x: [-10, 10], z: [2, 7] } : { x: [-12, 11], z: [3, 7.5] }; return { fid, x: rnd(A.x[0], A.x[1]), z: rnd(A.z[0], A.z[1]), ry: rnd(-3, 3), act: 'look' }; }
@@ -447,7 +454,7 @@ function rankOf(p, a, ms) { // 名額有限（車 3 台、書房 6 席、廁所 
   const ids = RES.filter(q => q.schedR && q.schedR.state !== 'meet' && schedAction(q, q.schedR, ms) === a).map(q => q.id).sort(); return ids.indexOf(p.id); }
 function schedGoalOf(p, a, slot) { const u = k => hh(p.id + ':' + slot + ':' + k);
   if (a === 'desk_work') return deskGoal(p, 'sit');
-  if (a === 'meeting') { const c = MCH[p.slotI], head = p.fid === MFID && !p.atMeet ? [[nearAisle(p.x), p.home[1] + 1.1], [nearAisle(p.x), 2.7]] : []; return { fid: MFID, x: c[0], z: c[1], ry: c[2], act: 'msit', meet: 1, via: head.concat(meetIn(c)) }; }
+  if (a === 'meeting') { const c = MCH[p.slotI], head = p.fid === MFID && !p.atMeet ? [[nearAisle(p.x), p.home[1] - backOf(p)], [nearAisle(p.x), 2.7]] : []; return { fid: MFID, x: c[0], z: c[1], ry: c[2], act: 'msit', meet: 1, via: head.concat(meetIn(c)) }; }
   if (a === 'read5f' && floorY['5F'] !== undefined) { const c = READ5[(p.slotI + Math.floor(hh('seat:' + slot) * 6)) % 6]; return { fid: '5F', x: c[0], z: c[1], ry: c[2], act: 'msit', via: [[c[0], c[1] + (c[2] ? 1 : -1)]] }; }
   if (a === 'out') { const c = CARS[p.car], cx = c.home[0] + .3, cz = c.home[1] - 1.2; return { fid: '1F', x: cx, z: cz, ry: Math.PI / 2, act: 'look', car: p.car, via: [[0, 8], [0, 11.3], [cx, 11.3]] }; }
   if (a === 'coffee') { const q = ICAFE.q[p.slotI]; return { fid: '1F', x: q[0], z: q[1], ry: Math.PI, act: 'look', cafe: 1 }; }
@@ -595,7 +602,7 @@ if (false) { const y = floorY['RF']; controls.minDistance = 1; tweenT = 1; targe
 setRoster(ROSTER_FALLBACK);
 fetch('roster.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(r => { if (r && r.residents) { setRoster(r); people(0, 0); } }).catch(() => {});
 for (let k = 0; k < 90; k++) people(1 / 30, k / 30);
-function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(), dt = Math.min(.1, t - last); last = t; if (!SHOT) people(dt, t); if (window.botStep) botStep(SHOT ? 0 : dt, SHOT ? 0 : t);
+function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(), dt = Math.min(.1, t - last); last = t; if (!SHOT) people(dt * SPD, t); if (window.botStep) botStep(SHOT ? 0 : dt, SHOT ? 0 : t);
   if (tweenT < 1) { tweenT = Math.min(1, tweenT + dt / .8); const k = 1 - Math.pow(1 - tweenT, 3); camera.position.lerpVectors(from.p, camPos, k); controls.target.lerpVectors(from.t, target, k); }
   controls.update(); if (camera.position.y < 1.2) { camera.position.y = 1.2; } tags(); composer.render(); }
 { // city skyline: flat silhouettes in 3 depths, unlit, no shadows, not clickable
