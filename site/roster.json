@@ -35,7 +35,26 @@
    "id": "engineer",
    "floor": 5,
    "desk": 7,
-   "skin": "engineer"
+   "skin": "engineer",
+   "form": "cube",
+   "palette": "ENG",
+   "name": "軟體工程精靈"
+  },
+  {
+   "id": "fx",
+   "floor": 3,
+   "desk": 7,
+   "form": "cube",
+   "palette": "FX",
+   "name": "外匯小精靈"
+  },
+  {
+   "id": "koc",
+   "floor": 3,
+   "desk": 6,
+   "form": "cube",
+   "palette": "KOC",
+   "name": "KOC小精靈"
   }
  ]
 }

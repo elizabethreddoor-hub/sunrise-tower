@@ -37,6 +37,19 @@
       ],
       "screen": "#14161C",
       "eye": "#FF86DC"
+    },
+    "ENG": {
+      "name": "軟體工程精靈",
+      "body": "#4F8FE0",
+      "edge": "#2B5FB0",
+      "orbit": [
+        "#8EC5FF",
+        "#3A72D0",
+        "#BFE0FF",
+        "#1E4C9A"
+      ],
+      "screen": "#14161C",
+      "eye": "#7FE8FF"
     }
   },
   "emissive": {
