@@ -32,6 +32,10 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const box = document.getElementById('three');
 const Q = new URLSearchParams(location.search), SHOT = Q.get('shot') || '';
+// 作息表 v0.1：以「台北時間的 10 分鐘時段」當種子，讓同一時刻開網頁的人看到同一個起始畫面（?at=2026-10-26T15:20 固定模擬時間；?sched=0 關閉）
+const SCHED_ON = Q.get('sched') !== '0', SIM0 = Q.get('at') ? Date.parse(Q.get('at') + ':00+08:00') : null, LOAD0 = Date.now();
+const schedNow = () => SIM0 !== null && !isNaN(SIM0) ? SIM0 + (SHOT ? 0 : Date.now() - LOAD0) : Date.now();
+if (SCHED_ON) { let sd = (Math.floor(schedNow() / 600000) % 2147483646) + 1; Math.random = () => (sd = (sd * 16807) % 2147483647) / 2147483647; }
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: !!SHOT }); }
 catch (e) { document.body.classList.add('nogl'); throw e; }
@@ -346,10 +350,11 @@ function goal(p, g) { // g = {fid,x,z,ry,act:'sit'|'rest'|'msit'|'talk'|'look'}
   const k = g.fid + ':' + g.x.toFixed(2) + ':' + g.z.toFixed(2) + ':' + g.act; if (p.gk === k && !g.force) { p.queued = null; return; } if (!SHOT && busy(p) && !g.force) { p.queued = g; return; } p.gk = k; p.g2 = g;
   if (SHOT) { p.fid = g.fid; p.y = fH(g.fid) + T; p.x = g.x; p.z = g.z; p.ry = g.ry; p.act = g.act; p.path = []; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; }
   p.queued = null; if (!p.path.length) plan(p); else p.pend = 1; }
-function plan(p) { const g = p.g2; p.pend = 0; p.path = [];
+function plan(p) { const g = p.g2; p.pend = 0; p.path = []; if (g.pre) { g.pre.forEach(v => p.path.push(v)); }
   if (p.fid === g.fid && Math.hypot(p.x - g.x, p.z - g.z) < .05) { p.act = g.act; p.ry = g.ry; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; } p.act = 'walk'; p.seat = 0;
   if (Math.hypot(p.x - p.home[0], p.z - p.home[1]) < .05 && p.fid === p.hf) p.path.push([p.home[0], p.home[1] + 1.1]); // stand up and step out
   if (g.fid !== p.fid) { const sd = p.x >= 0 ? 1 : -1, ex = sd * 13.4, sx = sd * ELEV_X; p.path.push([ex, .9], { door: p.fid, sd }, [sx, .9], [sx, 0], { lift: g.fid, sd }, [sx, .9], [ex, .9], [ex, 2.2]); }
+  if (g.via) g.via.forEach(v => p.path.push(v));
   if (g.act === 'sit' || g.act === 'rest') p.path.push([g.x, g.z + 1.1]); else if (g.act === 'msit') p.path.push([g.x, g.z + (g.ry ? .6 : -.6)]);
   p.path.push([g.x, g.z]); }
 function deskGoal(p, act) { return { fid: p.hf, x: p.home[0], z: p.home[1], ry: 0, act }; }
@@ -378,9 +383,11 @@ function tagSet(p, nm, st) { const k = nm + '|' + st; if (p.tagK === k) return; 
   if (STI[st]) { const i = document.createElement('span'); i.className = 'sti'; i.title = STI[st][2]; i.innerHTML = '<i style="background:' + STI[st][0] + '"></i>'; i.appendChild(document.createTextNode(STI[st][1])); p.tag.appendChild(i); } }
 function applyStatus(list, names) { LAST_ST = list; if (names !== undefined) LAST_NM = names || null; const by = {}; (list || []).forEach(r => { by[String(r.id).replace(/^home_/, '')] = r; });
   const MG = meetGoals(list || []);
+  RES.forEach(q => { q.schedR = by[q.id] || {}; });
   RES.forEach(p => { rinit(p); const r = by[p.id] || {}; const nm = r.name || (LAST_NM && LAST_NM[p.id]) || ''; if (!r.id) { tagSet(p, nm, ''); p.bubT = ''; return; } tagSet(p, nm, nm ? (r.state === 'work' ? 'work' : r.state === 'meet' ? 'meet' : 'idle') : '');
     p.want = r.state === 'work' ? 'work' : r.state === 'meet' && MG[p.id] ? 'meet' : 'idle'; p.bubT = r.activity ? String(r.activity).slice(0, 18) : '';
-    if (p.want === 'work') goal(p, deskGoal(p, 'sit')); else if (p.want === 'meet') goal(p, MG[p.id]);
+    p.sched = SCHED_ON && p.want !== 'meet' ? 1 : 0; if (p.sched) { p.schedR = r; schedOne(p); }
+    else if (p.want === 'work') goal(p, deskGoal(p, 'sit')); else if (p.want === 'meet') goal(p, MG[p.id]);
     else if (SHOT && /wander/.test(Q.get('mock') || '') && (p.wg = p.wg || { fid: p.hf, x: rnd(-12, 11), z: rnd(2.6, 7), ry: rnd(-3, 3), act: 'look' })) goal(p, p.wg);
     else if (SHOT && Q.get('mock') === 'cmp' && p.id === 'vera') goal(p, { fid: '3F', x: -9.6, z: 3.4, ry: .5, act: 'look' });
     else if (SHOT && Q.get('mock') === 'coffee' && /^srg_0[1-4]$|^nova$/.test(p.id)) { const i = +p.id.slice(-1) || 0; goal(p, i % 4 === 0 ? { fid: '1F', x: ICAFE.pick[0], z: ICAFE.pick[1], ry: Math.PI, act: 'look' } : { fid: '1F', x: ICAFE.q[(i % 4) - 1][0], z: ICAFE.q[(i % 4) - 1][1], ry: Math.PI, act: 'look' }); if (i % 4 === 0) cupSet(p, 1); }
@@ -390,6 +397,69 @@ function applyStatus(list, names) { LAST_ST = list; if (names !== undefined) LAS
   Object.values(GR).forEach(l => l.forEach((p, i) => { p.sayOrd = i; p.sayN = l.length; }));
   if (SHOT) people(0, 0); }
 window.P7_applyStatus = applyStatus;
+// ===== 作息表 v0.1（預覽）=====
+// 每 10 分鐘一個時段；角色這個時段做什麼 = hash(角色id + 時段編號) 照比例抽，所以同一時刻大家算出來一樣。
+// 在線(工作中/待命)照作息動；離線(away 或心跳過期)待在座位；討論中照舊（由心跳決定）。
+const SLOT = 600000, TOI = { door: [-12, -9.8], via: [[-12, -8.4], [-12, -10.7]], stand: [-13.1, -11.3] };
+const READ5 = [[4.4, 1.2, 0], [6, 1.2, 0], [7.6, 1.2, 0], [4.4, 3.8, Math.PI], [6, 3.8, Math.PI], [7.6, 3.8, Math.PI]];
+function hh(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } h ^= h >>> 13; h = Math.imul(h, 2246822507); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
+const tpHour = ms => (((ms / 3600000 + 8) % 24) + 24) % 24;
+function schedWeights(st, hr) { // 動作比例（%）＋一天的時段規則
+  const night = hr >= 22 || hr < 7, lunch = hr >= 12 && hr < 13, cafe = (hr >= 10 && hr < 11) || (hr >= 15 && hr < 16), pm = hr >= 14 && hr < 18;
+  if (st === 'work') return [['desk_work', pm ? 60 : 70], ['read5f', pm ? 25 : 18], ['out', night ? 0 : pm ? 15 : 12]];
+  return [['desk_rest', night ? 70 : 40], ['wander', night ? 15 : lunch ? 35 : 25], ['coffee', night ? 0 : cafe ? 25 : 15], ['toilet', night ? 15 : 10]]; }
+const FORCE = {}; (Q.get('act') || '').split(',').forEach(x => { const [a, b] = x.split(':'); if (a && b) FORCE[a] = b; });
+function schedAction(p, r, ms) { const off = !r || !r.id || r.state === 'away' || r.fresh === 'stale';
+  if (off) return 'offline'; if (FORCE[p.id]) return FORCE[p.id]; const slot = Math.floor(ms / SLOT), W = schedWeights(r.state === 'work' ? 'work' : 'idle', tpHour(ms));
+  let u = hh(p.id + ':' + slot) * W.reduce((a, w) => a + w[1], 0); for (const w of W) { if ((u -= w[1]) < 0) return w[0]; } return W[0][0]; }
+const CAP = { out: 3, read5f: 6, toilet: 1, coffee: 3 }, FALLBACK = { out: 'desk_work', read5f: 'desk_work', toilet: 'desk_rest', coffee: 'desk_rest' };
+function rankOf(p, a, ms) { // 名額有限（車 3 台、書房 6 席、廁所 1 間、咖啡排隊 3 位）：同一時段同動作的人按 id 排序分配，超過名額的人改回座位
+  const ids = RES.filter(q => q.schedR && q.schedR.state !== 'meet' && schedAction(q, q.schedR, ms) === a).map(q => q.id).sort(); return ids.indexOf(p.id); }
+function schedGoalOf(p, a, slot) { const u = k => hh(p.id + ':' + slot + ':' + k);
+  if (a === 'desk_work') return deskGoal(p, 'sit');
+  if (a === 'read5f' && floorY['5F'] !== undefined) { const c = READ5[(p.slotI + Math.floor(hh('seat:' + slot) * 6)) % 6]; return { fid: '5F', x: c[0], z: c[1], ry: c[2], act: 'msit', via: [[c[0], c[1] + (c[2] ? 1 : -1)]] }; }
+  if (a === 'out') { const c = CARS[p.car], cx = c.home[0] + .3, cz = c.home[1] - 1.2; return { fid: '1F', x: cx, z: cz, ry: Math.PI / 2, act: 'look', car: p.car, via: [[0, 8], [0, 11.3], [cx, 11.3]] }; }
+  if (a === 'coffee') { const q = ICAFE.q[p.slotI]; return { fid: '1F', x: q[0], z: q[1], ry: Math.PI, act: 'look', cafe: 1 }; }
+  if (a === 'toilet') return { fid: '1F', x: TOI.stand[0], z: TOI.stand[1], ry: -Math.PI / 2, act: 'look', via: TOI.via.slice() };
+  if (a === 'wander') { const r = u('f'), fid = r < .65 ? p.hf : r < .9 ? OFFICE_FIDS[Math.floor(u('o') * 3)] : '1F', A = fid === '1F' ? { x: [-10, 10], z: [2, 7] } : { x: [-12, 11], z: [3, 7.5] };
+    return { fid, x: A.x[0] + u('x') * (A.x[1] - A.x[0]), z: A.z[0] + u('z') * (A.z[1] - A.z[0]), ry: u('r') * 6 - 3, act: 'look' }; }
+  return deskGoal(p, 'rest'); }
+function schedOne(p) { rinit(p); const ms = schedNow(), slot = Math.floor(ms / SLOT); let a = schedAction(p, p.schedR, ms); if (CAP[a]) { const i = rankOf(p, a, ms); if (i < 0 || i >= CAP[a] || (a === 'out' && !CARS.length)) a = FALLBACK[a]; else { p.slotI = i; if (a === 'out') p.car = i; } } const k = a + '@' + (a === 'offline' || /^desk/.test(a) ? '' : slot + '#' + p.slotI);
+  if (p.schedK === k) return; const first = p.schedK === undefined; p.schedK = k; p.schedA = a; const g = schedGoalOf(p, a, slot);
+  if (a !== 'coffee' && p.cup) cupSet(p, 0);
+  if (a === 'out' && (first || SHOT)) { const c = CARS[p.car]; p.away = 1; p.fid = '1F'; p.y = fH('1F') + T; p.x = g.x; p.z = g.z; p.path = []; p.act = 'look'; p.seat = 0; p.g2 = g; if (p.g) p.g.visible = false; c.rider = p;
+    const lv = SHOT ? +(Q.get('carlv') || 0) : 0; if (lv > 0) { c.state = 'leaving'; c.d = Math.min(CAR_GONE - .1, lv * CAR_V); } else { c.state = 'gone'; c.d = CAR_GONE; } carPose(c); return; }
+  if (p.away && a !== 'out') { const c = CARS[p.car]; c.state = 'returning'; c.d = CAR_GONE; c.rider = p; c.after = g; return; } // 回來演出：車開回來→停好→下車→進門回座位
+  if (a === 'out') g.pre = undefined;
+  if (first || SHOT) { p.fid = g.fid; p.y = fH(g.fid) + T; p.x = g.x; p.z = g.z; p.ry = g.ry; p.act = g.act; p.path = []; p.seat = /sit|rest/.test(g.act) ? 1 : 0; p.g2 = g; p.gk = ''; p.pend = 0; p.inLift = 0; if (p.g) p.g.visible = true; if (a === 'coffee') cupSet(p, 1); return; }
+  goal(p, Object.assign(g, { force: 1 })); }
+window.P7_sched = () => RES.filter(p => p.sched).map(p => p.id + '=' + p.schedA).join(' ');
+if (Q.get('dump')) { const el = document.createElement('pre'); el.id = 'schedDump'; el.style.cssText = 'position:fixed;right:8px;top:8px;z-index:99;background:#fffe;color:#123;font:12px monospace;padding:6px;margin:0;max-width:420px;white-space:pre-wrap'; document.body.appendChild(el);
+  setInterval(() => { const ms = schedNow(), d = new Date(ms + 8 * 3600000).toISOString().slice(0, 16).replace('T', ' '); el.textContent = '除錯：模擬台北時間 ' + d + '（時段 ' + Math.floor(ms / SLOT) + '）\n' + RES.filter(p => p.sched).map(p => p.id + ' ' + p.schedA + ' ' + p.fid + ' (' + p.x.toFixed(2) + ',' + p.z.toFixed(2) + ')').join('\n'); }, 300); }
+if (SCHED_ON && !SHOT) setInterval(() => RES.forEach(p => { if (p.sched) schedOne(p); }), 1000);
+// 門口 3 台車（低面數：車身＋車廂＋4 輪＋車窗）。外出 = 走出大門上車，車往左開出視野；回來 = 車開回車位、下車、進門。
+const CARS = [], CAR_V = 6, CAR_GONE = 48;
+function carPose(c) { c.g.position.set(c.home[0] - c.d, fH('1F'), c.home[1]); c.g.visible = c.state !== 'gone'; }
+{ const M = c => new THREE.MeshLambertMaterial({ color: c }), GL = M(0x9fc8ee), TY = M(0x22262E);
+  [[-6.5, 0x2F6FB3], [-10, 0xF4F6F9], [-13.5, 0xF08A24]].forEach(([x, col], i) => { const g = new THREE.Group(), add = (w, h, d, px, py, pz, m) => { const o = new THREE.Mesh(B(w, h, d), m); o.position.set(px, py, pz); o.castShadow = true; o.raycast = () => {}; g.add(o); };
+    add(3.6, .7, 1.7, 0, .65, 0, M(col)); add(2, .6, 1.5, .2, 1.3, 0, M(col)); add(2.04, .4, 1.54, .2, 1.32, 0, GL); add(.06, .4, 1.3, -.82, 1.3, 0, GL);
+    [[-1.15, -.8], [1.15, -.8], [-1.15, .8], [1.15, .8]].forEach(w => add(.6, .6, .25, w[0], .3, w[1], TY));
+    g.name = 'CAR_' + i; scene.add(g); const c = { g, home: [x, 13.6], d: 0, state: 'parked', rider: null }; CARS.push(c); carPose(c); });
+  let lt = performance.now(); setInterval(() => { const now = performance.now(), dt = Math.min(.2, (now - lt) / 1000); lt = now; if (SHOT) return;
+    CARS.forEach(c => { if (c.state === 'leaving') { c.d += CAR_V * dt * Math.min(1, .3 + c.d / 3); if (c.d >= CAR_GONE) { c.state = 'gone'; c.d = CAR_GONE; } }
+      else if (c.state === 'returning') { c.g.visible = true; c.d -= CAR_V * dt * Math.min(1, .3 + c.d / 3); if (c.d <= 0) { c.d = 0; c.state = 'parked'; const p = c.rider, g = c.after; c.rider = null;
+        if (p) { p.away = 0; p.fid = '1F'; p.y = fH('1F') + T; p.x = c.home[0] + .3; p.z = c.home[1] - 1.2; p.path = []; p.gk = ''; if (p.g) p.g.visible = true; g.pre = [[c.home[0] + .3, 11.3], [0, 11.3], [0, 8]]; goal(p, Object.assign(g, { force: 1 })); } } }
+      carPose(c); }); }, 33); }
+{ // 1F 廁所：面對大樓左後方，後牆開一扇小門＋門外小房間（沒屋頂；正常視角被鎖看不到大樓後方）
+  const y = floorY['1F'], g = new THREE.Group(), M = c => new THREE.MeshLambertMaterial({ color: c }), WALL = M(0xE3E8EE), DOOR = M(0x2F6FB3);
+  const add = (w, h, d, x, yy, z, m) => { const o = new THREE.Mesh(B(w, h, d), m); o.position.set(x, y + yy, z); o.castShadow = true; o.receiveShadow = true; o.raycast = () => {}; g.add(o); return o; };
+  const x0 = TOI.door[0], z0 = TOI.door[1];
+  add(1.0, 2.1, .08, x0, 1.05, z0 - .05, DOOR); add(.18, .18, .1, x0 + .32, 1.0, z0 - .12, M(0xF08A24)); // 小門＋門把
+  add(2.6, .05, 2.4, x0 - .6, .03, z0 - 1.25, M(0xCFD6DE)); // 地板
+  add(.08, 2.6, 2.4, x0 - 1.9, 1.3, z0 - 1.25, WALL); add(.08, 2.6, 2.4, x0 + .7, 1.3, z0 - 1.25, WALL); add(2.6, 2.6, .08, x0 - .6, 1.3, z0 - 2.45, WALL);
+  const sg = add(.7, .7, .03, x0 + 1.1, 2.3, z0 - .02, M(0x2F6FB3)); sg.name = 'WC_sign';
+  g.name = 'WC_1F_rear'; scene.add(g); }
+
 function dimSync(p) { const ms = p.g && p.g.userData.M; if (!ms) return; const k = 1 - .68 * p.dim;
   ms.forEach(m => { m.color.setRGB(k, k, k * 1.08); }); }
 function resStep(p, dt, t) { rinit(p);
@@ -402,6 +472,9 @@ function resStep(p, dt, t) { rinit(p);
     const dx = w[0] - p.x, dz = w[1] - p.z, d = Math.hypot(dx, dz);
     if (d < .06) { p.path.shift(); if (p.pend) { plan(p); return 'idle'; } if (!p.path.length) { p.x = w[0]; p.z = w[1]; p.ry = p.g2.ry; p.act = p.g2.act; p.seat = /sit|rest/.test(p.act) ? 1 : 0; p.stay = p.g2.cafe ? 5 : rnd(4, 9); p.sitT = rnd(25, 70); p.hold = 2.5; } return 'walk'; }
     const v = Math.min(d, .9 * dt); p.x += dx / d * v; p.z += dz / d * v; const ry = Math.atan2(dx, dz); p.ry += Math.atan2(Math.sin(ry - p.ry), Math.cos(ry - p.ry)) * Math.min(1, dt * 6); return 'walk'; }
+  if (p.sched && p.g2 && p.g2.car !== undefined && p.schedA === 'out' && !p.away && p.act === 'look') { const c = CARS[p.g2.car]; p.away = 1; p.g.visible = false; c.rider = p; c.state = 'leaving'; c.d = 0; }
+  if (p.sched && p.away) return 'idle';
+  if (p.sched) { const cf = p.g2 && p.g2.cafe; if (cf && p.act === 'look' && !p.cup) cupSet(p, 1); if (!cf && p.cup && p.seat) cupSet(p, 0); return p.act === 'look' ? 'idle' : p.act; }
   // arrived. idle: rest at desk; after a while wander (1-2 stops), then come back
   if (p.queued && (p.mode === 'desk' || !p.mode) && p.hold <= 0) { const q = p.queued; q.force = 1; goal(p, q); q.force = 0; return 'walk'; }
   if (p.mode === 'coffee' && p.act === 'look') { p.stay -= dt; if (p.stay <= 2.5 && !p.cup) cupSet(p, 1); if (p.stay <= 0) { p.mode = 'desk'; const q = p.queued; goal(p, Object.assign(q && /sit|rest/.test(q.act) ? q : deskGoal(p, 'rest'), { force: 1 })); if (q && !/sit|rest/.test(q.act)) p.queued = q; } return 'idle'; }
@@ -545,6 +618,9 @@ if (SHOT === 'cafe') { const y = floorY['1F']; controls.minDistance = 1; tweenT 
 for (const [s, f] of [['lift3', '3F'], ['lift2', '2F']]) if (SHOT === s) { const y = floorY[f]; controls.minDistance = 1; tweenT = 1; controls.minPolarAngle = .3; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; target.set(s === 'lift2' ? -12.5 : 12.5, y + 1, .5); camPos.set(s === 'lift2' ? -6 : 6, y + 4, 10); camera.position.copy(camPos); controls.target.copy(target); }
 for (const [s, f] of [['wide2', '2F'], ['wide3', '3F'], ['wide4', 'RF']]) if (SHOT === s) { const y = floorY[f]; controls.minDistance = 1; tweenT = 1; const cx = +(Q.get('cx') || -1.5), cd = +(Q.get('cd') || 20.5); target.set(cx, y + 1.1, -1.5); camPos.set(cx, y + 4.6, cd); camera.position.copy(camPos); controls.target.copy(target); }
 if (Q.get('floor')) setTimeout(() => { const b = document.querySelector('#fbar button[data-f="' + Q.get('floor') + '"]'); if (b) b.click(); }, 300);
+if (SHOT === 'back') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -9; controls.maxAzimuthAngle = 9; controls.minPolarAngle = .1; controls.maxPolarAngle = 3; target.set(-12.2, y + .8, -11); camPos.set(-10, y + 11, -19); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'cars') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.minPolarAngle = .3; controls.maxDistance = 200; target.set(-12, y + 1, 12); camPos.set(-4, y + 10, 36); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'read5') { const y = floorY['5F']; controls.minDistance = 1; tweenT = 1; target.set(6, y + 1, 2.5); camPos.set(6, y + 4, 10.5); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'info') info.style.display = 'block';
 document.title = 'STATS=' + JSON.stringify(stats());
 loop();

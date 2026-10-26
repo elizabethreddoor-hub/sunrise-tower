@@ -25,6 +25,7 @@
     if (mock === 'group') { var g = ['home_mira', 'home_vera', 'home_stylist', 'home_contract', 'home_fx', 'home_nova', 'srg_03', 'srg_04'];
       var SY = { home_mira: '今天的重點是新大樓進度', home_vera: '我補充一下預算', home_nova: '3D 模型已經上線了', srg_03: '外部團隊這邊沒問題' };
       g.forEach(function (id) { S(id, 'meet', g.filter(function (x) { return x !== id; }), 0, SY[id]); }); }
+    if (mock === 'sched') { S('home_nova', 'work', 0, '蓋大樓中'); S('home_contract', 'work', 0, '看合約'); S('home_vera', 'work', 0, '整理品牌'); S('home_stylist', 'away'); by['home_stylist'].fresh = 'stale'; for (var j = 1; j <= 16; j += 3) S('srg_' + ('0' + j).slice(-2), 'work'); }
     if (mock === 'board') { S('home_nova', 'work', 0, '蓋大樓中'); S('home_contract', 'work', 0, '看合約'); S('home_mira', 'meet', ['home_vera']); S('home_vera', 'meet', ['home_mira']); S('srg_01', 'work', 0, '整理客戶名單'); }
     window.P7_mockList = list;
     ready(function () { window.P7_applyStatus(list, team ? (function () { var n = {}; for (var i = 1; i <= 16; i++) n['srg_' + ('0' + i).slice(-2)] = '（團隊名牌' + i + '）'; return n; })() : null); }); return; }
