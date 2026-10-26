@@ -404,13 +404,12 @@ const SLOT = 600000, TOI = { door: [-12, -9.8], via: [[-12, -8.4], [-12, -10.7]]
 const READ5 = [[4.4, 1.2, 0], [6, 1.2, 0], [7.6, 1.2, 0], [4.4, 3.8, Math.PI], [6, 3.8, Math.PI], [7.6, 3.8, Math.PI]];
 function hh(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } h ^= h >>> 13; h = Math.imul(h, 2246822507); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
 const tpHour = ms => (((ms / 3600000 + 8) % 24) + 24) % 24;
-function schedWeights(st, hr) { // 動作比例（%）＋一天的時段規則
-  const night = hr >= 22 || hr < 7, lunch = hr >= 12 && hr < 13, cafe = (hr >= 10 && hr < 11) || (hr >= 15 && hr < 16), pm = hr >= 14 && hr < 18;
-  if (st === 'work') return [['desk_work', pm ? 60 : 70], ['read5f', pm ? 25 : 18], ['out', night ? 0 : pm ? 15 : 12]];
-  return [['desk_rest', night ? 70 : 40], ['wander', night ? 15 : lunch ? 35 : 25], ['coffee', night ? 0 : cafe ? 25 : 15], ['toilet', night ? 15 : 10]]; }
+function schedWeights(st) { // 全天同一套比例（無時段限制）；待命合計 90，按相對權重換算約 44/28/17/11
+  if (st === 'work') return [['desk_work', 70], ['read5f', 18], ['out', 12]];
+  return [['desk_rest', 40], ['wander', 25], ['coffee', 15], ['toilet', 10]]; }
 const FORCE = {}; (Q.get('act') || '').split(',').forEach(x => { const [a, b] = x.split(':'); if (a && b) FORCE[a] = b; });
 function schedAction(p, r, ms) { const off = !r || !r.id || r.state === 'away' || r.fresh === 'stale';
-  if (off) return 'offline'; if (FORCE[p.id]) return FORCE[p.id]; const slot = Math.floor(ms / SLOT), W = schedWeights(r.state === 'work' ? 'work' : 'idle', tpHour(ms));
+  if (off) return 'offline'; if (FORCE[p.id]) return FORCE[p.id]; const slot = Math.floor(ms / SLOT), W = schedWeights(r.state === 'work' ? 'work' : 'idle');
   let u = hh(p.id + ':' + slot) * W.reduce((a, w) => a + w[1], 0); for (const w of W) { if ((u -= w[1]) < 0) return w[0]; } return W[0][0]; }
 const CAP = { out: 3, read5f: 6, toilet: 1, coffee: 3 }, FALLBACK = { out: 'desk_work', read5f: 'desk_work', toilet: 'desk_rest', coffee: 'desk_rest' };
 function rankOf(p, a, ms) { // 名額有限（車 3 台、書房 6 席、廁所 1 間、咖啡排隊 3 位）：同一時段同動作的人按 id 排序分配，超過名額的人改回座位
@@ -433,9 +432,10 @@ function schedOne(p) { rinit(p); const ms = schedNow(), slot = Math.floor(ms / S
   if (a === 'out') g.pre = undefined;
   if (first || SHOT) { p.fid = g.fid; p.y = fH(g.fid) + T; p.x = g.x; p.z = g.z; p.ry = g.ry; p.act = g.act; p.path = []; p.seat = /sit|rest/.test(g.act) ? 1 : 0; p.g2 = g; p.gk = ''; p.pend = 0; p.inLift = 0; if (p.g) p.g.visible = true; if (a === 'coffee') cupSet(p, 1); return; }
   goal(p, Object.assign(g, { force: 1 })); }
+window.P7_schedForce = FORCE; // 除錯用：測試時可指定角色動作
 window.P7_sched = () => RES.filter(p => p.sched).map(p => p.id + '=' + p.schedA).join(' ');
 if (Q.get('dump')) { const el = document.createElement('pre'); el.id = 'schedDump'; el.style.cssText = 'position:fixed;right:8px;top:8px;z-index:99;background:#fffe;color:#123;font:12px monospace;padding:6px;margin:0;max-width:420px;white-space:pre-wrap'; document.body.appendChild(el);
-  setInterval(() => { const ms = schedNow(), d = new Date(ms + 8 * 3600000).toISOString().slice(0, 16).replace('T', ' '); el.textContent = '除錯：模擬台北時間 ' + d + '（時段 ' + Math.floor(ms / SLOT) + '）\n' + RES.filter(p => p.sched).map(p => p.id + ' ' + p.schedA + ' ' + p.fid + ' (' + p.x.toFixed(2) + ',' + p.z.toFixed(2) + ')').join('\n'); }, 300); }
+  setInterval(() => { const ms = schedNow(), d = new Date(ms + 8 * 3600000).toISOString().slice(0, 16).replace('T', ' '); el.textContent = '除錯：模擬台北時間 ' + d + '（時段 ' + Math.floor(ms / SLOT) + '）\n' + RES.filter(p => p.sched).map(p => p.id + ' ' + p.schedA + ' ' + p.fid + ' (' + p.x.toFixed(2) + ',' + p.z.toFixed(2) + ')').join('\n') + '\n車: ' + CARS.map(c => c.state + ' ' + c.d.toFixed(1)).join(' | '); }, 300); }
 if (SCHED_ON && !SHOT) setInterval(() => RES.forEach(p => { if (p.sched) schedOne(p); }), 1000);
 // 門口 3 台車（低面數：車身＋車廂＋4 輪＋車窗）。外出 = 走出大門上車，車往左開出視野；回來 = 車開回車位、下車、進門。
 const CARS = [], CAR_V = 6, CAR_GONE = 48;
