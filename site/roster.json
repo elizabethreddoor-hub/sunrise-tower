@@ -5,31 +5,36 @@
    "id": "mira",
    "floor": 3,
    "desk": 1,
-   "skin": "mira"
+   "skin": "mira",
+   "name": "Mira"
   },
   {
    "id": "vera",
    "floor": 3,
    "desk": 2,
-   "skin": "vera"
+   "skin": "vera",
+   "name": "Vera"
   },
   {
    "id": "stylist",
    "floor": 3,
    "desk": 4,
-   "skin": "stylist"
+   "skin": "stylist",
+   "name": "造型師"
   },
   {
    "id": "contract",
    "floor": 5,
    "desk": 4,
-   "skin": "contract"
+   "skin": "contract",
+   "name": "合約管家"
   },
   {
    "id": "nova",
    "floor": 3,
    "desk": 8,
-   "skin": "nova"
+   "skin": "nova",
+   "name": "Nova"
   },
   {
    "id": "engineer",
