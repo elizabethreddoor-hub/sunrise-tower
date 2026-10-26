@@ -36,7 +36,7 @@ export function initCubeSprites(ctx) {
     const FB = [{ id: 'fx', fid: '3F', desk: 7, palette: 'FX', name: '外匯小精靈' }, { id: 'koc', fid: '3F', desk: 6, palette: 'KOC', name: 'KOC小精靈' }];
     function build(list) { SPR.forEach(s => scene.remove(s.g)); SPR.length = 0;
       (list && list.length ? list : FB).forEach((a, i) => { const pal = j.palettes[a.palette]; if (!pal || floorY[a.fid] === undefined) return;
-        make(pal, { id: a.id, name: a.name, fid: a.fid, xz: deskPos(+a.desk || 0), h: 1.25, ry: 0, ph: i * 1.3 }); }); }
+        make(pal, { id: a.id, name: a.name, fid: a.fid, xz: deskPos(+a.desk || 0), h: 1.25, ry: 0, ph: i * 1.3 }); });  if (window.P7_cubeRegister) window.P7_cubeRegister(SPR); }
     build(window.P7_CUBE_ROSTER); window.P7_cubeRoster = l => { build(l); step(+(Q.get('ct') || 0.6)); };
     // click: name tag bubble above the sprite for 4 s
     const tag = document.createElement('div'); tag.className = 'ntag'; (wrap || document.body).appendChild(tag); let tagS = null, tagT = 0; const tv = new THREE.Vector3();

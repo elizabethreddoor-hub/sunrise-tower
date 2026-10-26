@@ -298,7 +298,7 @@ function buildBlock(id, scale) { const M0 = skinMats(id); if (!M0) return null; 
   r.armR = mk(part('rarm', 'rsleeve', px, -4, 4, 12, 4), g, -6 * px, 22 * px); r.armL = mk(part('larm', 'lsleeve', px, -4, 4, 12, 4), g, 6 * px, 22 * px);
   g.userData.rig = r; g.userData.M = M; g.userData.px = px; scene.add(g); return g; }
 function setRoster(r) { const all = ((r && r.residents) || []).filter(a => a && (a.skin || a.id) && FLOOR_ID[a.floor] && floorY[FLOOR_ID[a.floor]] !== undefined);
-  window.P7_CUBE_ROSTER = all.filter(a => a.form === 'cube').map(a => Object.assign({}, a, { fid: FLOOR_ID[a.floor] })); if (window.P7_cubeRoster) window.P7_cubeRoster(window.P7_CUBE_ROSTER);
+  window.P7_CUBE_ROSTER = all.filter(a => a.form === 'cube').map(a => Object.assign({}, a, { fid: FLOOR_ID[a.floor] })); 
   const list = all.filter(a => a.form !== 'cube').slice(0, RMAX);
   RES.forEach(p => { p.tag.remove(); if (p.bub) p.bub.remove(); if (p.sayEl) p.sayEl.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0;
   list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], d = deskPos(+a.desk || 0), sc = +a.scale || 1;
@@ -306,8 +306,13 @@ function setRoster(r) { const all = ((r && r.residents) || []).filter(a => a && 
     p.g = buildBlock(a.skin || a.id, sc);
     const tag = document.createElement('div'); tag.className = 'ntag'; box.appendChild(tag); p.tag = tag;
     const bub = document.createElement('div'); bub.className = 'bub'; box.appendChild(bub); p.bub = bub; RES.push(p); });
-  RES.forEach(p => { p.bubT = ''; }); if (LAST_ST) applyStatus(LAST_ST); }
-function poseBlock(p, m, t) { const g = p.g, R = g.userData.rig, px = g.userData.px; let sw = 0; g.position.set(p.x, p.y, p.z); g.rotation.y = p.ry;
+  RES.forEach(p => { p.bubT = ''; }); if (window.P7_cubeRoster) window.P7_cubeRoster(window.P7_CUBE_ROSTER); if (LAST_ST) applyStatus(LAST_ST); }
+// v0.3：資料方塊精靈加入作息表，跟人一樣走動（漂浮移動，高度 1.25 m）；點擊名牌仍由 cube_sprite.js 處理
+window.P7_cubeRegister = list => { for (let i = RES.length - 1; i >= 0; i--) if (RES[i].cube) { RES[i].tag.remove(); RES.splice(i, 1); }
+  list.forEach((s, j) => { const fid = s.fid, x = s.g.position.x, z = s.g.position.z; const tag = document.createElement('div'); tag.className = 'ntag'; box.appendChild(tag);
+    RES.push({ res: true, cube: s, id: s.id, want: null, dim: 0, fid, sc: 1, ph: j, home: [x, z], x, z, ry: 0, y: floorY[fid] + T, seat: 1, sitT: 30, to: null, pause: 0, g: s.g, tag }); });
+  applyStatus(LAST_ST || [], LAST_NM === null ? undefined : LAST_NM); };
+function poseBlock(p, m, t) { if (p.cube) { p.g.position.set(p.x, p.y + 1.25, p.z); p.g.rotation.y = p.ry; return; } const g = p.g, R = g.userData.rig, px = g.userData.px; let sw = 0; g.position.set(p.x, p.y, p.z); g.rotation.y = p.ry;
   ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => R[k].rotation.set(0, 0, 0));
   if (m === 'sit' || m === 'rest' || m === 'msit') { const ty = m === 'sit' ? Math.sin(t * 9 + p.ph) * .12 : 0; g.position.y = p.y + .5 - 12 * px; R.legL.rotation.x = R.legR.rotation.x = -1.5;
     if (m === 'rest') { R.armL.rotation.x = R.armR.rotation.x = -.35 + Math.sin(t * 1.3 + p.ph) * .04; R.head.rotation.y = Math.sin(t * .4 + p.ph) * .3; }
@@ -341,7 +346,7 @@ const CUPG = B(.09, .12, .09), CUPM = new THREE.MeshLambertMaterial({ color: 0xF
    [2.9, .08, .7, -.3, 2.3, -1.38, 0xF08A24], [4.42, .12, 2.12, 0, 2.42, 0, 0xF08A24], [1.0, .5, .04, 2.75, 1.25, -1.01, 0x9fc8ee]].forEach(q => { const m = new THREE.Mesh(B(q[0], q[1], q[2]), M(q[6])); m.position.set(tx + q[3], y + q[4], tz + q[5]); m.castShadow = true; g.add(m); });
   [[-1.4, -1], [1.4, -1], [-1.4, 1], [2.7, -1], [2.7, 1], [1.4, 1]].slice(0, 4).forEach(w => { const m = new THREE.Mesh(B(.6, .6, .25), M(0x22262E)); m.position.set(tx + w[0], y + .3, tz + w[1] * 1.0); g.add(m); });
   g.name = 'FOODTRUCK'; g.traverse(o => { if (o.isMesh) o.raycast = () => {}; }); OUTSET.add(g); }
-function cupSet(p, on) { if (!p.g) return; if (on && !p.cupM) { p.cupM = new THREE.Mesh(CUPG, CUPM); p.cupM.position.set(0, -11 * p.g.userData.px, 2.5 * p.g.userData.px); p.g.userData.rig.armR.children[0].add(p.cupM); } if (p.cupM) p.cupM.visible = !!on; p.cup = !!on; }
+function cupSet(p, on) { if (!p.g || p.cube) { p.cup = !!on; return; } if (on && !p.cupM) { p.cupM = new THREE.Mesh(CUPG, CUPM); p.cupM.position.set(0, -11 * p.g.userData.px, 2.5 * p.g.userData.px); p.g.userData.rig.armR.children[0].add(p.cupM); } if (p.cupM) p.cupM.visible = !!on; p.cup = !!on; }
 function coffeeGoal(p) { const q = Math.floor(Math.random() * 3); return { fid: '1F', x: ICAFE.q[q][0], z: ICAFE.q[q][1], ry: Math.PI, act: 'look', cafe: 1 }; }
 function busy(p) { return p.path.length > 0 || p.mode === 'wander' || p.mode === 'coffee' || (p.hold || 0) > 0; }
 function rinit(p) { if (p.hf) return; p.hf = p.fid; p.mode = 'desk'; p.path = []; p.dim = 0; }
@@ -350,13 +355,30 @@ function goal(p, g) { // g = {fid,x,z,ry,act:'sit'|'rest'|'msit'|'talk'|'look'}
   const k = g.fid + ':' + g.x.toFixed(2) + ':' + g.z.toFixed(2) + ':' + g.act; if (p.gk === k && !g.force) { p.queued = null; return; } if (!SHOT && busy(p) && !g.force) { p.queued = g; return; } p.gk = k; p.g2 = g;
   if (SHOT) { p.fid = g.fid; p.y = fH(g.fid) + T; p.x = g.x; p.z = g.z; p.ry = g.ry; p.act = g.act; p.path = []; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; }
   p.queued = null; if (!p.path.length) plan(p); else p.pend = 1; }
-function plan(p) { const g = p.g2; p.pend = 0; p.path = []; if (g.pre) { g.pre.forEach(v => p.path.push(v)); }
+// 1F 大廳路徑點（v0.3）：大廳中間有一條走道 z=1.5（櫃台前、沙發區後），所有路線先走到走道再沿走道橫移，不再斜穿玻璃或牆。
+// 門外（z>9.9）經大門 (0,9.2)/(0,11.3)；後門廁所經 x=-12 通道；咖啡吧經 (10.9,-2)；電梯口 (±12,1.5)。
+const HALL_Z = 1.5;
+const lobbyZone = (x, z) => z > 9.9 ? 'out' : z < -9.85 ? 'wc' : x > 8.3 && z < -1.5 ? 'cafe' : 'hall';
+function lobbyChain(x, z) { // 從某點走到大廳走道的路徑點（最後一點在走道上）
+  if (z > 9.9) return [[x, 11.3], [0, 11.3], [0, 9.2], [0, HALL_Z]];
+  if (z < -9.85) return [[-12, -10.7], [-12, -8.4], [-12, -2], [-12, HALL_Z]];
+  if (x > 8.3 && z < -1.5) return [[10.9, -2], [10.9, HALL_Z]];
+  return [[x, HALL_Z]]; }
+const ROUTE_DBG = Q.get('route') ? [] : null;
+function plan(p) { const g = p.g2; p.pend = 0; p.path = [];
   if (p.fid === g.fid && Math.hypot(p.x - g.x, p.z - g.z) < .05) { p.act = g.act; p.ry = g.ry; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; } p.act = 'walk'; p.seat = 0;
   if (Math.hypot(p.x - p.home[0], p.z - p.home[1]) < .05 && p.fid === p.hf) p.path.push([p.home[0], p.home[1] + 1.1]); // stand up and step out
-  if (g.fid !== p.fid) { const sd = p.x >= 0 ? 1 : -1, ex = sd * 13.4, sx = sd * ELEV_X; p.path.push([ex, .9], { door: p.fid, sd }, [sx, .9], [sx, 0], { lift: g.fid, sd }, [sx, .9], [ex, .9], [ex, 2.2]); }
-  if (g.via) g.via.forEach(v => p.path.push(v));
-  if (g.act === 'sit' || g.act === 'rest') p.path.push([g.x, g.z + 1.1]); else if (g.act === 'msit') p.path.push([g.x, g.z + (g.ry ? .6 : -.6)]);
-  p.path.push([g.x, g.z]); }
+  const dst = []; if (g.act === 'sit' || g.act === 'rest') dst.push([g.x, g.z + 1.1]); else if (g.act === 'msit') dst.push([g.x, g.z + (g.ry ? .6 : -.6)]); dst.push([g.x, g.z]);
+  if (g.fid !== p.fid) { const sd = p.x >= 0 ? 1 : -1, ex = sd * 13.4, sx = sd * ELEV_X;
+    if (p.fid === '1F') p.path.push(...lobbyChain(p.x, p.z), [sd * 12, HALL_Z]);
+    p.path.push([ex, .9], { door: p.fid, sd }, [sx, .9], [sx, 0], { lift: g.fid, sd }, [sx, .9], [ex, .9]);
+    if (g.fid === '1F') p.path.push([sd * 12, HALL_Z], ...lobbyChain(g.x, g.z).reverse()); else { p.path.push([ex, 2.2]); if (g.via) g.via.forEach(v => p.path.push(v)); } }
+  else if (g.fid === '1F' && lobbyZone(p.x, p.z) === lobbyZone(g.x, g.z) && lobbyZone(g.x, g.z) !== 'hall') { /* 同一區（門外、咖啡吧、廁所）直接走 */ }
+  else if (g.fid === '1F') { const a = lobbyChain(p.x, p.z), b = lobbyChain(g.x, g.z).reverse(); if (a.length > 1 || b.length > 1) p.path.push(...a, ...b); }
+  else if (g.via) g.via.forEach(v => p.path.push(v));
+  p.path.push(...dst);
+  if (ROUTE_DBG && (p.fid === '1F' || g.fid === '1F')) { const y = fH('1F') + .12, pts = [[p.x, p.z]].concat(p.path.filter(w => Array.isArray(w))).map(w => new THREE.Vector3(w[0], y, w[1]));
+    const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xFF2D55, depthTest: false })); ln.renderOrder = 999; scene.add(ln); ROUTE_DBG.push(ln); } }
 function deskGoal(p, act) { return { fid: p.hf, x: p.home[0], z: p.home[1], ry: 0, act }; }
 function wanderGoal(p) { if (Math.random() < .3 && !p.cup) { p.mode = 'coffee'; return coffeeGoal(p); } const r = Math.random(), fid = r < .65 ? p.hf : r < .9 ? OFFICE_FIDS[Math.floor(Math.random() * 3)] : '1F';
   const A = fid === '1F' ? { x: [-10, 10], z: [2, 7] } : { x: [-12, 11], z: [3, 7.5] }; return { fid, x: rnd(A.x[0], A.x[1]), z: rnd(A.z[0], A.z[1]), ry: rnd(-3, 3), act: 'look' }; }
@@ -383,8 +405,8 @@ function tagSet(p, nm, st) { const k = nm + '|' + st; if (p.tagK === k) return; 
   if (STI[st]) { const i = document.createElement('span'); i.className = 'sti'; i.title = STI[st][2]; i.innerHTML = '<i style="background:' + STI[st][0] + '"></i>'; i.appendChild(document.createTextNode(STI[st][1])); p.tag.appendChild(i); } }
 function applyStatus(list, names) { LAST_ST = list; if (names !== undefined) LAST_NM = names || null; const by = {}; (list || []).forEach(r => { by[String(r.id).replace(/^home_/, '')] = r; });
   const MG = meetGoals(list || []);
-  RES.forEach(q => { q.schedR = by[q.id] || {}; });
-  RES.forEach(p => { rinit(p); const r = by[p.id] || {}; const nm = r.name || (LAST_NM && LAST_NM[p.id]) || ''; if (!r.id) { tagSet(p, nm, ''); p.bubT = ''; return; } tagSet(p, nm, nm ? (r.state === 'work' ? 'work' : r.state === 'meet' ? 'meet' : 'idle') : '');
+  RES.forEach(q => { q.schedR = by[q.id] || (q.cube ? { id: q.id, state: 'idle', fresh: 'live' } : {}); });
+  RES.forEach(p => { rinit(p); let r = by[p.id] || {}; if (p.cube && !r.id) r = { id: p.id, state: 'idle', fresh: 'live' }; const nm = p.cube ? '' : r.name || (LAST_NM && LAST_NM[p.id]) || ''; if (!r.id) { tagSet(p, nm, ''); p.bubT = ''; return; } tagSet(p, nm, nm ? (r.state === 'work' ? 'work' : r.state === 'meet' ? 'meet' : 'idle') : '');
     p.want = r.state === 'work' ? 'work' : r.state === 'meet' && MG[p.id] ? 'meet' : 'idle'; p.bubT = r.activity ? String(r.activity).slice(0, 18) : '';
     p.sched = SCHED_ON && p.want !== 'meet' ? 1 : 0; if (p.sched) { p.schedR = r; schedOne(p); }
     else if (p.want === 'work') goal(p, deskGoal(p, 'sit')); else if (p.want === 'meet') goal(p, MG[p.id]);
@@ -420,11 +442,12 @@ function schedGoalOf(p, a, slot) { const u = k => hh(p.id + ':' + slot + ':' + k
   if (a === 'out') { const c = CARS[p.car], cx = c.home[0] + .3, cz = c.home[1] - 1.2; return { fid: '1F', x: cx, z: cz, ry: Math.PI / 2, act: 'look', car: p.car, via: [[0, 8], [0, 11.3], [cx, 11.3]] }; }
   if (a === 'coffee') { const q = ICAFE.q[p.slotI]; return { fid: '1F', x: q[0], z: q[1], ry: Math.PI, act: 'look', cafe: 1 }; }
   if (a === 'toilet') return { fid: '1F', x: TOI.stand[0], z: TOI.stand[1], ry: -Math.PI / 2, act: 'look', via: TOI.via.slice() };
-  if (a === 'wander') { const r = u('f'), fid = r < .65 ? p.hf : r < .9 ? OFFICE_FIDS[Math.floor(u('o') * 3)] : '1F', A = fid === '1F' ? { x: [-10, 10], z: [2, 7] } : { x: [-12, 11], z: [3, 7.5] };
+  if (a === 'wander') { const r = u('f'), fid = r < .65 ? p.hf : r < .9 ? OFFICE_FIDS[Math.floor(u('o') * 3)] : '1F', A = fid === '1F' ? { x: [-3, 3], z: [2.5, 8] } : { x: [-12, 11], z: [3, 7.5] };
     return { fid, x: A.x[0] + u('x') * (A.x[1] - A.x[0]), z: A.z[0] + u('z') * (A.z[1] - A.z[0]), ry: u('r') * 6 - 3, act: 'look' }; }
   return deskGoal(p, 'rest'); }
-function schedOne(p) { rinit(p); const ms = schedNow(), slot = Math.floor(ms / SLOT); let a = schedAction(p, p.schedR, ms); if (CAP[a]) { const i = rankOf(p, a, ms); if (i < 0 || i >= CAP[a] || (a === 'out' && !CARS.length)) a = FALLBACK[a]; else { p.slotI = i; if (a === 'out') p.car = i; } } const k = a + '@' + (a === 'offline' || /^desk/.test(a) ? '' : slot + '#' + p.slotI);
-  if (p.schedK === k) return; const first = p.schedK === undefined; p.schedK = k; p.schedA = a; const g = schedGoalOf(p, a, slot);
+function schedOne(p) { rinit(p); const ms = schedNow(), slot = Math.floor(ms / SLOT); let a = schedAction(p, p.schedR, ms); if (CAP[a]) { const i = rankOf(p, a, ms); if (i < 0 || i >= CAP[a] || (a === 'out' && !CARS.length)) a = FALLBACK[a]; else { p.slotI = i; if (a === 'out') p.car = i; } }   const g = schedGoalOf(p, a, slot), k = a + '@' + g.fid + ':' + g.x.toFixed(2) + ':' + g.z.toFixed(2); // 同一動作同一地點就不重新出發（跨時段也不會走回頭路）
+  if (p.away && a === 'out') return; // 已經開車出去的人，名額重排也不換車
+  if (p.schedK === k) return; const first = p.schedK === undefined; p.schedK = k; p.schedA = a;
   if (a !== 'coffee' && p.cup) cupSet(p, 0);
   if (a === 'out' && (first || SHOT)) { const c = CARS[p.car]; p.away = 1; p.fid = '1F'; p.y = fH('1F') + T; p.x = g.x; p.z = g.z; p.path = []; p.act = 'look'; p.seat = 0; p.g2 = g; if (p.g) p.g.visible = false; c.rider = p;
     const lv = SHOT ? +(Q.get('carlv') || 0) : 0; if (lv > 0) { c.state = 'leaving'; c.d = Math.min(CAR_GONE - .1, lv * CAR_V); } else { c.state = 'gone'; c.d = CAR_GONE; } carPose(c); return; }
@@ -435,11 +458,12 @@ function schedOne(p) { rinit(p); const ms = schedNow(), slot = Math.floor(ms / S
 window.P7_schedForce = FORCE; // 除錯用：測試時可指定角色動作
 window.P7_sched = () => RES.filter(p => p.sched).map(p => p.id + '=' + p.schedA).join(' ');
 if (Q.get('dump')) { const el = document.createElement('pre'); el.id = 'schedDump'; el.style.cssText = 'position:fixed;right:8px;top:8px;z-index:99;background:#fffe;color:#123;font:12px monospace;padding:6px;margin:0;max-width:420px;white-space:pre-wrap'; document.body.appendChild(el);
-  setInterval(() => { const ms = schedNow(), d = new Date(ms + 8 * 3600000).toISOString().slice(0, 16).replace('T', ' '); el.textContent = '除錯：模擬台北時間 ' + d + '（時段 ' + Math.floor(ms / SLOT) + '）\n' + RES.filter(p => p.sched).map(p => p.id + ' ' + p.schedA + ' ' + p.fid + ' (' + p.x.toFixed(2) + ',' + p.z.toFixed(2) + ')').join('\n') + '\n車: ' + CARS.map(c => c.state + ' ' + c.d.toFixed(1)).join(' | '); }, 300); }
+  setInterval(() => { const ms = schedNow(), d = new Date(ms + 8 * 3600000).toISOString().slice(0, 16).replace('T', ' '); el.textContent = '除錯：模擬台北時間 ' + d + '（時段 ' + Math.floor(ms / SLOT) + '）\n' + RES.filter(p => p.sched).map(p => p.id + ' ' + p.schedA + (p.slotI !== undefined && CAP[p.schedA] ? '#' + p.slotI : '') + ' ' + p.fid + ' (' + p.x.toFixed(2) + ',' + p.z.toFixed(2) + ')').join('\n') + '\n車: ' + CARS.map(c => c.state + ' ' + c.d.toFixed(1)).join(' | '); }, 300); }
 if (SCHED_ON && !SHOT) setInterval(() => RES.forEach(p => { if (p.sched) schedOne(p); }), 1000);
 // 門口 3 台車（低面數：車身＋車廂＋4 輪＋車窗）。外出 = 走出大門上車，車往左開出視野；回來 = 車開回車位、下車、進門。
 const CARS = [], CAR_V = 6, CAR_GONE = 48;
-function carPose(c) { c.g.position.set(c.home[0] - c.d, fH('1F'), c.home[1]); c.g.visible = c.state !== 'gone'; }
+/* 車子先往外開到車道（離開車位 2.4 m）再往左開，不穿過其他停著的車 */
+function carPose(c) { c.g.position.set(c.home[0] - Math.max(0, c.d - 2), fH('1F'), c.home[1] + Math.min(c.d, 2) * 1.2); c.g.visible = c.state !== 'gone'; }
 { const M = c => new THREE.MeshLambertMaterial({ color: c }), GL = M(0x9fc8ee), TY = M(0x22262E);
   [[-6.5, 0x2F6FB3], [-10, 0xF4F6F9], [-13.5, 0xF08A24]].forEach(([x, col], i) => { const g = new THREE.Group(), add = (w, h, d, px, py, pz, m) => { const o = new THREE.Mesh(B(w, h, d), m); o.position.set(px, py, pz); o.castShadow = true; o.raycast = () => {}; g.add(o); };
     add(3.6, .7, 1.7, 0, .65, 0, M(col)); add(2, .6, 1.5, .2, 1.3, 0, M(col)); add(2.04, .4, 1.54, .2, 1.32, 0, GL); add(.06, .4, 1.3, -.82, 1.3, 0, GL);
@@ -448,7 +472,7 @@ function carPose(c) { c.g.position.set(c.home[0] - c.d, fH('1F'), c.home[1]); c.
   let lt = performance.now(); setInterval(() => { const now = performance.now(), dt = Math.min(.2, (now - lt) / 1000); lt = now; if (SHOT) return;
     CARS.forEach(c => { if (c.state === 'leaving') { c.d += CAR_V * dt * Math.min(1, .3 + c.d / 3); if (c.d >= CAR_GONE) { c.state = 'gone'; c.d = CAR_GONE; } }
       else if (c.state === 'returning') { c.g.visible = true; c.d -= CAR_V * dt * Math.min(1, .3 + c.d / 3); if (c.d <= 0) { c.d = 0; c.state = 'parked'; const p = c.rider, g = c.after; c.rider = null;
-        if (p) { p.away = 0; p.fid = '1F'; p.y = fH('1F') + T; p.x = c.home[0] + .3; p.z = c.home[1] - 1.2; p.path = []; p.gk = ''; if (p.g) p.g.visible = true; g.pre = [[c.home[0] + .3, 11.3], [0, 11.3], [0, 8]]; goal(p, Object.assign(g, { force: 1 })); } } }
+        if (p) { p.away = 0; p.fid = '1F'; p.y = fH('1F') + T; p.x = c.home[0] + .3; p.z = c.home[1] - 1.2; p.path = []; p.gk = ''; if (p.g) p.g.visible = true; goal(p, Object.assign(g, { force: 1 })); } } }
       carPose(c); }); }, 33); }
 { // 1F 廁所：面對大樓左後方，後牆開一扇小門＋門外小房間（沒屋頂；正常視角被鎖看不到大樓後方）
   const y = floorY['1F'], g = new THREE.Group(), M = c => new THREE.MeshLambertMaterial({ color: c }), WALL = M(0xE3E8EE), DOOR = M(0x2F6FB3);
