@@ -557,9 +557,9 @@ function carPose(c) { c.g.position.set(c.home[0] - Math.max(0, c.d - 2), fH('1F'
     const PX0 = -47; // 底座左緣（見上方 plinth，實際在大樓地板區塊 mesh 裡）
     Object.keys(G).forEach(k => { const m = new THREE.Mesh(mergeGeometries(G[k].map(g => { if (!g.index) return g; return g; })), MT[k]); m.castShadow = false; m.receiveShadow = true; m.raycast = () => {}; grp.add(m); });
     // 建置中看板：立在大門上方兩根柱子上
-    // v0.2：「紅九九小店」字高減半（170px → 85px），「建置中・敬請期待」維持 68px；板面縮小成 7.6 × 2.6 m（每 px = 0.01 m，副標實際大小不變）
+    // v0.2：「紅九九Lite」（原「紅九九小店」）字高減半（170px → 85px），「建置中・敬請期待」維持 68px；板面縮小成 7.6 × 2.6 m（每 px = 0.01 m，副標實際大小不變）
     const cv = document.createElement('canvas'); cv.width = 760; cv.height = 260; { const g = cv.getContext('2d'); g.fillStyle = '#B71C2C'; g.fillRect(0, 0, 760, 260); g.strokeStyle = '#fff'; g.lineWidth = 8; g.strokeRect(12, 12, 736, 236);
-      g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 85px "Noto Sans TC",sans-serif'; g.fillText('紅九九小店', 380, 78);
+      g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 85px "Noto Sans TC",sans-serif'; g.fillText('紅九九Lite', 380, 78);
       g.fillStyle = '#F2B91C'; g.font = 'bold 68px "Noto Sans TC",sans-serif'; g.fillText('建置中・敬請期待', 380, 160); g.fillStyle = g.createPattern(sc, 'repeat'); g.fillRect(24, 206, 712, 24); }
     const stex = new THREE.CanvasTexture(cv); stex.colorSpace = THREE.SRGBColorSpace; stex.anisotropy = 4;
     const sx = GX, sy = y + 4.0, sz = BZ1 + .3, sign = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 2.6), new THREE.MeshBasicMaterial({ map: stex, color: 0xCFCFCF })); sign.position.set(sx, sy, sz + .09); sign.raycast = () => {};
