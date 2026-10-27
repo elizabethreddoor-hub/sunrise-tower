@@ -553,7 +553,7 @@ function carPose(c) { c.g.position.set(c.home[0] - Math.max(0, c.d - 2), fH('1F'
     add('yel', .3, 2.4, .3, MX, y + MH + 1.7, MZ); add('blk', 1.2, 1.1, 1.2, MX + .1, y + MH - .75, MZ + .9); add('blk', .05, 5.4, .05, MX - 9, y + MH - 2.5, MZ); add('wood', 1.6, .9, 1.6, MX - 9, y + MH - 5.6, MZ);
     // 合併成每種材質一個 mesh
     const grp = new THREE.Group(); grp.name = 'ANNEX_HONG99';
-    const pad = new THREE.Mesh(B(BX1 - BX0 + .75, .08, BZ1 - BZ0 + 1.2), MT.pad); pad.position.set((BX0 - .75 + BX1) / 2, y - .17, (BZ0 + BZ1) / 2); pad.receiveShadow = true; pad.raycast = () => {}; grp.add(pad);
+    const pad = new THREE.Mesh(B(BX1 - BX0 + .75, .06, BZ1 - BZ0 + 1.2), MT.pad); pad.position.set((BX0 - .75 + BX1) / 2, y, (BZ0 + BZ1) / 2); pad.receiveShadow = true; pad.raycast = () => {}; grp.add(pad);
     Object.keys(G).forEach(k => { const m = new THREE.Mesh(mergeGeometries(G[k].map(g => { if (!g.index) return g; return g; })), MT[k]); m.castShadow = false; m.receiveShadow = true; m.raycast = () => {}; grp.add(m); });
     // 建置中看板：立在大門上方兩根柱子上
     // v0.2：「紅九九小店」字高減半（170px → 85px），「建置中・敬請期待」維持 68px；板面縮小成 7.6 × 2.6 m（每 px = 0.01 m，副標實際大小不變）
@@ -565,7 +565,7 @@ function carPose(c) { c.g.position.set(c.home[0] - Math.max(0, c.d - 2), fH('1F'
     const sb = new THREE.Mesh(B(7.8, 2.8, .16), MT.red); sb.position.set(sx, sy, sz); sb.raycast = () => {}; grp.add(sb, sign);
     [-1, 1].forEach(s => { const p = new THREE.Mesh(B(.25, sy + 1.4, .25), MT.dark); p.position.set(sx + s * 3.5, (sy + 1.4) / 2 + y - .0, sz - .2); p.raycast = () => {}; grp.add(p); });
     // 兩棟之間的通道：淡淡的普通地面（只鋪地，不放任何東西），從前到後貫通；通道只在 passcar=1 除錯時才停一台車（車身朝前後）對照寬度
-    const lane = new THREE.Mesh(B(BX1 - WALLX + 1, .08, 26), L(0xCDD3DA)); lane.position.set((BX1 + WALLX - 1) / 2, y - .17, 1.5); lane.receiveShadow = true; lane.raycast = () => {}; grp.add(lane);
+    const lane = new THREE.Mesh(B(WALLX - 1 - BX1, .06, 26), L(0xCDD3DA)); lane.position.set((BX1 + WALLX - 1) / 2, y, 1.5); lane.receiveShadow = true; lane.raycast = () => {}; grp.add(lane);
     if (Q.get('passcar') && CARS.length) { const pc = CARS[0].g.clone(); pc.rotation.y = Math.PI / 2; pc.position.set((BX1 + WALLX) / 2, fH('1F'), +(Q.get('passcar')) > 1 ? +Q.get('passcar') : 3); pc.visible = true; pc.name = 'DEBUG_passcar'; grp.add(pc); }
     scene.add(grp); window.P7_annex = { grp, bounds: [BX0, BX1, BZ0, BZ1], sign: [sx, sy, sz], carW: CARW, margin: PMARG, pass: PASS, wallX: WALLX, passX: [BX1, WALLX] }; if (Q.get('dump')) { window.P7_scene = scene; window.P7_cars = CARS; } } }
 { // 1F 廁所：面對大樓左後方，後牆開一扇小門＋門外小房間（沒屋頂；正常視角被鎖看不到大樓後方）
