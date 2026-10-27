@@ -250,7 +250,8 @@ const SKINS = {"mira": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACA
 
 const target = new THREE.Vector3(), camPos = new THREE.Vector3(); let tweenT = 1; const from = { p: new THREE.Vector3(), t: new THREE.Vector3() };
 let towerH = 4 * FH;
-function camHome(H) { towerH = H; const a = innerWidth / Math.max(1, innerHeight), tv = Math.tan(camera.fov * Math.PI / 360), th = tv * a; const dist = Math.max((H + 6) / 2 / tv, (W1 / 2 + 2) / th) + D1 / 2; setCam(new THREE.Vector3(0, (H + 4) / 2, 0), dist, true, a < 1); }
+function camHome(H) { towerH = H; const a = innerWidth / Math.max(1, innerHeight), tv = Math.tan(camera.fov * Math.PI / 360), th = tv * a; let cx0 = 0, hw = W1 / 2; if (a >= 1 && Q.get('annex') !== '0') { cx0 = -13.8; hw = 31.2; } // 隔壁第二棟施工中：橫向畫面把鏡頭稍微拉寬、往左偏，全景看得到兩棟（直向手機維持只看大樓）
+  const dist = Math.max((H + 6) / 2 / tv, (hw + 2) / th) + D1 / 2; setCam(new THREE.Vector3(cx0, (H + 4) / 2, 0), dist, true, a < 1); }
 function setCam(t, dist, now, straight) { from.p.copy(camera.position); from.t.copy(controls.target); target.copy(t); camPos.set(straight ? 0 : t.x + dist * .12, t.y + dist * .05, t.z + dist); tweenT = now ? 1 : 0; if (now) { camera.position.copy(camPos); controls.target.copy(target); } }
 controls.maxDistance = 260; camera.far = 1600; controls.maxPolarAngle = 1.55; camera.updateProjectionMatrix();
 build([{ floor_id: '5F' }, { floor_id: 'RF' }, { floor_id: '3F' }, { floor_id: '2F' }, { floor_id: '1F' }]);
@@ -503,6 +504,64 @@ function carPose(c) { c.g.position.set(c.home[0] - Math.max(0, c.d - 2), fH('1F'
     ctx.fillStyle = '#1B2430'; if (!names.length) { ctx.font = 'bold 46px sans-serif'; ctx.fillText('全員在樓內', 256, 185); } else { const fs = names.length > 2 ? 50 : 58; ctx.font = 'bold ' + fs + 'px sans-serif'; names.slice(0, 3).forEach((n, i) => ctx.fillText(n, 256, 70 + (230 / Math.min(3, names.length)) * (i + .5))); }
     tex.needsUpdate = true; };
   draw(); setInterval(draw, 1000); window.P7_outBoard = draw; }
+{ // 預覽 annex v0.1：大樓左側隔壁的第二棟「紅九九小店」，蓋到一半（骨架柱樑、部分樓板、鷹架、施工圍欄、小吊車、建置中看板）。純裝飾，少量合併幾何，不碰角色與後端。?annex=0 可關閉。
+  if (Q.get('annex') !== '0') {
+    const AX0 = -41.5, AX1 = -17, AZ0 = -6.33, AZ1 = 10, FA = 4.4, y = 0; // 平面 24.5 × 16.33（大樓 30 × 20 的 0.8165 倍，面積約 2/3），三層各 4.4 m
+    const L = c => new THREE.MeshLambertMaterial(c && c.t ? c : { color: c });
+    const MT = { conc: L(0xB9B4AA), dark: L(0x8D8A84), steel: L(0x9AA4AE), rebar: L(0xA0603A), yel: L(0xF2B91C), wood: L(0xC9A06B), blk: L(0x2B2B2B), ora: L(0xF08A24), brick: L(0xC7765A), pad: L(0x8B7B63), cab: L(0x2F6FB3), red: L(0xB71C2C),
+      net: new THREE.MeshLambertMaterial({ color: 0x3C7A4A, transparent: true, opacity: .5, side: THREE.DoubleSide, depthWrite: false }) };
+    const sc = document.createElement('canvas'); sc.width = 128; sc.height = 64; { const g = sc.getContext('2d'); g.fillStyle = '#F2B91C'; g.fillRect(0, 0, 128, 64); g.fillStyle = '#23201C'; for (let i = -2; i < 6; i++) { g.beginPath(); g.moveTo(i * 32, 64); g.lineTo(i * 32 + 16, 64); g.lineTo(i * 32 + 48, 0); g.lineTo(i * 32 + 32, 0); g.fill(); } }
+    const st = new THREE.CanvasTexture(sc); st.wrapS = st.wrapT = THREE.RepeatWrapping; st.colorSpace = THREE.SRGBColorSpace; MT.stripe = L({ map: st, t: 1 });
+    const G = {}, add = (k, w, h, d, x, yy, z) => (G[k] = G[k] || []).push(B(w, h, d).translate(x, yy, z));
+    const xs = [0, 1, 2, 3].map(i => AX0 + 1 + i * (AX1 - AX0 - 2) / 3), zs = [AZ0 + 1, (AZ0 + AZ1) / 2, AZ1 - 1];
+    // 柱：1、2 層全高；3 層高低不一（施工到一半），頂端露出鋼筋
+    xs.forEach((x, i) => zs.forEach((z, j) => { for (let n = 0; n < 2; n++) add('conc', .6, FA, .6, x, y + n * FA + FA / 2, z);
+      const h = (j === 2 && i < 2) ? FA : FA - ((i * 2 + j * 3) % 4) * .9; if (h > .1) add('conc', .6, h, .6, x, y + 2 * FA + h / 2, z);
+      [[-.2, -.2], [.2, -.2], [-.2, .2], [.2, .2]].forEach(o => add('rebar', .05, 1.1, .05, x + o[0], y + 2 * FA + h + .55, z + o[1])); }));
+    // 樑：2F、3F 樓板下；屋頂層只在左前方有一小段
+    [1, 2].forEach(n => { zs.forEach(z => add('dark', AX1 - AX0 - 1.2, .4, .4, (AX0 + AX1) / 2, y + n * FA - .2, z)); xs.forEach(x => add('dark', .4, .4, AZ1 - AZ0 - 1.2, x, y + n * FA - .2, (AZ0 + AZ1) / 2)); });
+    add('dark', xs[1] - xs[0], .4, .4, (xs[0] + xs[1]) / 2, y + 3 * FA - .2, zs[2]);
+    // 部分樓板（模板木板色）：2F 左大半＋右後角；3F 只有左後一塊
+    add('wood', xs[2] - AX0 + .3, .3, AZ1 - AZ0, (AX0 - .3 + xs[2]) / 2, y + FA - .15, (AZ0 + AZ1) / 2);
+    add('wood', AX1 - xs[2], .3, 6.5, (xs[2] + AX1) / 2, y + FA - .15, AZ0 + 3.25);
+    add('wood', 12.5, .3, 9.5, AX0 + 6.25 - .3, y + 2 * FA - .15, AZ0 + 4.75);
+    // 1F 牆：後牆全高、左側半面、紅磚矮牆砌到一半
+    add('conc', AX1 - AX0, FA, .25, (AX0 + AX1) / 2, y + FA / 2, AZ0); add('conc', .25, FA, 8, AX0, y + FA / 2, AZ0 + 4); add('conc', .25, FA, 6, AX1, y + FA / 2, AZ0 + 3);
+    add('brick', 7, 1.4, .3, AX0 + 11.5, y + .7, AZ1 - .2); add('brick', 3, 2.1, .3, AX0 + 17.5, y + 1.05, AZ1 - .2); add('conc', 8.5, 1.6, .2, AX0 + 5, y + FA + .8, AZ0);
+    // 鷹架：左前 6 格、3 層樓高，木板台＋斜撐
+    const SZ = AZ1 + .9, SH = 3 * FA; for (let i = 0; i <= 6; i++) add('steel', .09, SH, .09, AX0 + i * 2, y + SH / 2, SZ);
+    for (let k = 1; k <= 6; k++) add('steel', 12, .08, .08, AX0 + 6, y + k * 2.2, SZ);
+    for (let k = 0; k < 3; k++) { add('wood', 12, .08, 1, AX0 + 6, y + (k + 1) * FA - .3, SZ - .5); [0, 2, 4].forEach(i => { const d = new THREE.BoxGeometry(.06, 5, .06).rotateZ((i % 4 ? 1 : -1) * .45).translate(AX0 + 1 + i * 2, y + k * FA + 2.2, SZ); (G.steel = G.steel || []).push(d); }); }
+    // 防墜網（綠色半透明），蓋在鷹架外面的上兩層
+    const net = new THREE.Mesh(new THREE.PlaneGeometry(12, 2 * FA - .4), MT.net); net.position.set(AX0 + 6, y + FA + (2 * FA - .4) / 2 + .2, SZ + .12); net.raycast = () => {}; scene.add(net);
+    // 圍欄：低矮黃黑警示護欄一圈，正面中間留 3 m 大門
+    const BX0 = AX0 - 1.2, BX1 = AX1 + 1.2, BZ0 = AZ0 - 1.2, BZ1 = 11.8, GX = (AX0 + AX1) / 2 - .5, bar = (xa, za, xb, zb) => { const len = Math.hypot(xb - xa, zb - za), n = Math.max(1, Math.round(len / 2.4)), a = Math.atan2(zb - za, xb - xa);
+      for (let i = 0; i < n; i++) { const t = (i + .5) / n, o = B(len / n - .06, 1, .3); o.rotateY(-a); o.translate(xa + (xb - xa) * t, y + .5, za + (zb - za) * t); (G.stripe = G.stripe || []).push(o); } };
+    bar(BX0, BZ1, GX - 1.5, BZ1); bar(GX + 1.5, BZ1, BX1, BZ1); bar(BX0, BZ0, BX1, BZ0); bar(BX0, BZ0, BX0, BZ1); bar(BX1, BZ0, BX1, BZ1);
+    [GX - 1.5, GX + 1.5].forEach(x => add('ora', .22, 1.6, .22, x, y + .8, BZ1));
+    [[-1.9, 12.6], [-.6, 12.6], [.8, 12.6], [2.2, 12.6]].forEach(c => { const o = new THREE.ConeGeometry(.22, .6, 8).translate(GX + c[0] + (c[0] > 0 ? 1 : -1) * .6, y + .3, c[1]); (G.ora = G.ora || []).push(o); });
+    // 材料：磚堆、鋼筋捆、沙堆、工地小屋
+    add('brick', 1.8, .9, 1.2, AX0 + 14.5, y + .45, AZ1 - 2.2); add('brick', 1.8, .6, 1.2, AX0 + 16.5, y + .3, AZ1 - 2.2); add('rebar', 3, .25, .5, AX0 + 5, y + .15, AZ1 - 2.5); add('rebar', 3, .25, .5, AX0 + 5, y + .4, AZ1 - 2.5);
+    (G.dark = G.dark || []).push(new THREE.ConeGeometry(1.2, 1, 8).translate(AX1 - 3.5, y + .5, AZ0 + 8));
+    add('cab', 4, 2.4, 2.4, AX1 - 2.5, y + 1.2, AZ1 - 3.5); add('wood', .9, 1.7, .08, AX1 - 2.5 - 1, y + 1.0, AZ1 - 3.5 + 1.24); add('blk', 3.2, .08, .08, AX1 - 2.5, y + 2.44, AZ1 - 3.5);
+    // 小吊車：立在後右角，吊臂往左伸到樓上，吊著一個木箱
+    const MX = AX1 - 2.5, MZ = AZ0 + 3, MH = 17.4;
+    add('yel', .7, MH, .7, MX, y + MH / 2, MZ); for (let k = 1; k < 9; k++) add('dark', .9, .1, .9, MX, y + k * 1.9, MZ);
+    add('yel', 15, .5, .5, MX - 6.5, y + MH + .25, MZ); add('yel', 3.4, .45, .45, MX + 1.6, y + MH + .25, MZ); add('dark', 1.4, 1.2, 1.2, MX + 2.8, y + MH - .15, MZ);
+    add('yel', .3, 2.4, .3, MX, y + MH + 1.7, MZ); add('blk', 1.2, 1.1, 1.2, MX + .1, y + MH - .75, MZ + .9); add('blk', .05, 5.4, .05, MX - 9, y + MH - 2.5, MZ); add('wood', 1.6, .9, 1.6, MX - 9, y + MH - 5.6, MZ);
+    // 合併成每種材質一個 mesh
+    const grp = new THREE.Group(); grp.name = 'ANNEX_HONG99';
+    const pad = new THREE.Mesh(B(BX1 - BX0 + 1.5, .08, BZ1 - BZ0 + 1.2), MT.pad); pad.position.set((BX0 + BX1) / 2, y - .17, (BZ0 + BZ1) / 2); pad.receiveShadow = true; pad.raycast = () => {}; grp.add(pad);
+    Object.keys(G).forEach(k => { const m = new THREE.Mesh(mergeGeometries(G[k].map(g => { if (!g.index) return g; return g; })), MT[k]); m.castShadow = false; m.receiveShadow = true; m.raycast = () => {}; grp.add(m); });
+    // 建置中看板：立在大門上方兩根柱子上
+    const cv = document.createElement('canvas'); cv.width = 1100; cv.height = 360; { const g = cv.getContext('2d'); g.fillStyle = '#B71C2C'; g.fillRect(0, 0, 1100, 360); g.strokeStyle = '#fff'; g.lineWidth = 10; g.strokeRect(14, 14, 1072, 332);
+      g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 170px "Noto Sans TC",sans-serif'; g.fillText('紅九九小店', 550, 135);
+      g.fillStyle = '#F2B91C'; g.font = 'bold 68px "Noto Sans TC",sans-serif'; g.fillText('建置中・敬請期待', 550, 262); g.fillStyle = st.image ? g.createPattern(sc, 'repeat') : '#F2B91C'; g.fillRect(24, 306, 1052, 28); }
+    const stex = new THREE.CanvasTexture(cv); stex.colorSpace = THREE.SRGBColorSpace; stex.anisotropy = 4;
+    const sx = GX, sy = y + 4.0, sz = BZ1 + .3, sign = new THREE.Mesh(new THREE.PlaneGeometry(11, 3.6), new THREE.MeshBasicMaterial({ map: stex, color: 0xCFCFCF })); sign.position.set(sx, sy, sz + .09); sign.raycast = () => {};
+    const sb = new THREE.Mesh(B(11.2, 3.8, .16), MT.red); sb.position.set(sx, sy, sz); sb.raycast = () => {}; grp.add(sb, sign);
+    [-1, 1].forEach(s => { const p = new THREE.Mesh(B(.25, sy + 1.7, .25), MT.dark); p.position.set(sx + s * 5.2, (sy + 1.7) / 2 + y - .0, sz - .2); p.raycast = () => {}; grp.add(p); });
+    scene.add(grp); window.P7_annex = { grp, bounds: [BX0, BX1, BZ0, BZ1], sign: [sx, sy, sz] }; } }
 { // 1F 廁所：面對大樓左後方，後牆開一扇小門＋門外小房間（沒屋頂；正常視角被鎖看不到大樓後方）
   const y = floorY['1F'], g = new THREE.Group(), M = c => new THREE.MeshLambertMaterial({ color: c }), WALL = M(0xE3E8EE), DOOR = M(0x2F6FB3);
   const add = (w, h, d, x, yy, z, m) => { const o = new THREE.Mesh(B(w, h, d), m); o.position.set(x, y + yy, z); o.castShadow = true; o.receiveShadow = true; o.raycast = () => {}; g.add(o); return o; };
@@ -675,6 +734,7 @@ if (SHOT === 'back') { const y = floorY['1F']; controls.minDistance = 1; tweenT 
 if (SHOT === 'cars') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.minPolarAngle = .3; controls.maxDistance = 200; target.set(-12, y + 1, 12); camPos.set(-4, y + 10, 36); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'meeting') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(6.5, y + .9, -2); camPos.set(5, y + 3.7, 8.5); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'outboard') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.minPolarAngle = .3; controls.maxDistance = 200; target.set(3, y + 2.6, 11); camPos.set(3, y + 6, 34); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'annex') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.minPolarAngle = .3; controls.maxDistance = 200; target.set(-29.5, y + 5.2, 4); camPos.set(-24, y + 6.5, 44); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'read5') { const y = floorY['5F']; controls.minDistance = 1; tweenT = 1; target.set(6, y + 1, 2.5); camPos.set(6, y + 4, 10.5); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'info') info.style.display = 'block';
 document.title = 'STATS=' + JSON.stringify(stats());
