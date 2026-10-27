@@ -1,7 +1,7 @@
 import asyncio
 from playwright.async_api import async_playwright
 JS="""async()=>{const a=P7_annex,[BX0,BX1,BZ0,BZ1]=a.bounds,res=[];
- const rects={fence_annex:[BX0,BX1,BZ0,BZ1+.3],sign:[BX0,BX1,BZ1,BZ1+.5],plinth:[-16,16,-10.45,12.05]};
+ const rects={fence_annex:[BX0,BX1,BZ0,BZ1+.3],sign:[BX0,BX1,BZ1,BZ1+.5],plinth:[-16,16,-10.45,12.05],plinth_ext:[-47,-15.5,-10.4,12.1]};
  for(const i of [2,1,0]){const c=P7_cars[i];for(const mode of ['leaving','returning']){
    c.state=mode;c.d=mode==='leaving'?0:48;c.g.visible=true;let hit=[],minz=1e9,minxAnnex=1e9,n=0;
    while(c.state===mode){await new Promise(r=>setTimeout(r,50));const q=c.g.position,b={min:{x:q.x-1.8,z:q.z-.925},max:{x:q.x+1.8,z:q.z+.925}};n++;
