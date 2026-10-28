@@ -221,8 +221,8 @@ function build(floors) {
   { const FZ = D1 / 2 + 1.6, U = (parts) => mergeGeometries(parts.map(q => { const gg = q[0].index ? q[0].toNonIndexed() : q[0]; ['uv'].forEach(a => gg.deleteAttribute(a)); gg.translate(q[1], q[2], q[3]); return gg; })); 
     const unit = [[U([[cyl(.06, .08, 3, 6), 3.2, 1.5, 0], [B(.8, .55, .8), 2.0, .28, -.2]]), SH.main], [U([[B(.36, .08, .36), 3.2, 3.0, 0], [B(.86, .05, .86), 2.0, .57, -.2]]), L1.gold], [U([[new THREE.IcosahedronGeometry(.2, 0), 3.2, 3.22, 0]]), FM['1F'].light], [U([[XT(.9, 1.1, 1), 2.0, 1.05, -.2]]), DS(L1.green)]];
     unit.forEach(([geo, mm]) => { const im = new THREE.InstancedMesh(geo, mm, 2), o = new THREE.Object3D(); [1, -1].forEach((sx, i) => { o.position.set(0, 0, FZ); o.scale.set(sx, 1, 1); o.updateMatrix(); im.setMatrixAt(i, o.matrix); }); im.castShadow = true; world.add(im); }); } 
-  let y = H, w = W + .3, d = D + .3; [[.9, 1.0], [.72, .9], [.52, .8]].forEach((s) => {
-    const hh = s[1]; mesh(B(w * s[0], hh, d * s[0]), SH.main, 0, y + hh / 2, 0, world); mesh(B(w * s[0] + .06, .06, d * s[0] + .06), SH.trim, 0, y + hh, 0, world, false);
+  let y = H, w = W + .3, d = D + .3; window.P7_roof = { top: H, tiers: [] }; [[.9, 1.0], [.72, .9], [.52, .8]].forEach((s) => {
+    const hh = s[1]; window.P7_roof.tiers.push({ y, h: hh, w: w * s[0], d: d * s[0] }); mesh(B(w * s[0], hh, d * s[0]), SH.main, 0, y + hh / 2, 0, world); mesh(B(w * s[0] + .06, .06, d * s[0] + .06), SH.trim, 0, y + hh, 0, world, false);
     for (let j = -2; j <= 2; j++) mesh(B(.05, hh, .03), SH.trim, j * w * s[0] / 6, y + hh / 2, d * s[0] / 2 + .01, world, false); y += hh; });
   mesh(new THREE.ConeGeometry(.35, 2.2, 4), SH.trim, 0, y + 1.1, 0, world);
   mergeStatic(world, true); 
@@ -721,6 +721,7 @@ function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(),
     u.arms.forEach(([m, s, r0]) => { m.rotation.x = r0 + (b.kind === 'barista' && s === 'R' ? 0 : Math.sin(t * 1.8 + b.ph + (s === 'L' ? 0 : 1.5)) * .087); }); }); }
 }
 import('./cube_sprite.js').then(m => m.initCubeSprites({ THREE, scene, floorY, T, deskPos, SHOT, Q, camera, controls, camPos, target, box }));
+import('./roof_garden.js').then(m => m.initRoofGarden({ THREE, scene, SHOT, Q, camera, controls, camPos, target }));
 import('./lightstrip.js').then(m => m.initLightStrip({ THREE, scene, floorY, SHOT, Q, camera, controls, camPos, target })).then(() => import('./contract_board.js').then(m => m.initContractBoard({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target }))).then(() => import('./quarterly_floor.js').then(m => m.initQuarterlyFloor({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target })));
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
