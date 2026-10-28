@@ -1,5 +1,5 @@
-// 屋頂公園 v0.3（步道三案＋電梯亭）：庭彣 10/28 19:09 要求拿掉環形步道、電梯直達屋頂。
-//   ROOF_PATH：A＝L 形折線（造型師）、B＝日出放射（Vera）、C＝Y 形（Nova）；預覽可用 ?path=A|B|C 覆蓋。
+// 屋頂公園 v0.4（A 案上線版）：庭彣 10/28 20:28 選定 A 案 L 形步道、不加支線、電梯亭只蓋右側；20:54 指示把 B、C 從線上程式拿掉。
+//   只保留 A＝L 形折線（造型師），不再接受 ?path 參數；B、C 案只留在 preview/roof-park-b、-c 分支。
 //   電梯亭：對齊大樓右側電梯井（index.html ELEV_X = W/2 - .75、ELEV_Z = 0）往上延伸，門朝前（+z），門前 2×2 格金邊入口平台，步道一律從平台接出。
 // 屋頂公園 v0.2（B 方案＋品牌元素）：整個屋頂做成一片平面公園，取代原本的兩層階梯與尖塔（index.html 已拿掉）。
 // 位置全部由 build() 記下的 window.P7_roof（最頂層頂面 deckY、樓板寬深）計算，不寫死高度；大樓加蓋重跑 build() 時，
@@ -9,10 +9,8 @@
 // 配色只用：暖灰石板 #A39A8E、淺木、玉綠 #4FA37A（樹冠另用同色系深一階）、金邊 #C9A24E。不用紅色、不用 #8C040C。
 // 只有燈具會發光（燈柱燈頭、涼亭吊燈）；其餘一律不自發光的 Lambert 材質。不加點光源，避免搶各層呼吸燈條的焦點。
 // 屋頂上沒有任何文字、LOGO、招牌或數字。隔壁紅九九Lite 不動。這版不做角色上屋頂散步。
-const ROOF_PATH_DEFAULT = 'A';
 export function initRoofPark(ctx) {
   const { THREE, scene, SHOT, Q, camera, controls, camPos, target } = ctx;
-  const ROOF_PATH = (Q && /^[ABC]$/.test(Q.get('path') || '') ? Q.get('path') : ROOF_PATH_DEFAULT);
   const STONE = 0xA39A8E, WOOD = 0xD9B98C, WOOD2 = 0xC4A274, JADE = 0x4FA37A, JADE2 = 0x3E8A64, GOLD = 0xC9A24E, STONE2 = 0x8E8679;
   const M = c => new THREE.MeshLambertMaterial({ color: c });
   const MAT = { stone: M(STONE), wood: M(WOOD), wood2: M(WOOD2), jade: M(JADE), jade2: M(JADE2), gold: M(GOLD), stone2: M(STONE2) };
@@ -43,16 +41,9 @@ export function initRoofPark(ctx) {
     const roof = new THREE.Mesh(new THREE.ConeGeometry(2.75, 1.4, 4), MAT.stone); roof.rotation.y = Math.PI / 4; roof.position.set(PX, rb + .18 + .7, PZ); roof.castShadow = true; g.add(roof);
     cyl(.08, .14, .35, MAT.gold, PX, rb + .18 + 1.4 + .12, PZ, 8);
     box(.03, .5, .03, MAT.gold, PX, rb - .25, PZ, false); box(.26, .3, .26, LAMP, PX, rb - .62, PZ, false);
-    // 中間空草坪：涼亭前方盡量留空（之後活動用）；B、C 案有步道穿過，A 案完整保留。
-    // ── 共用：步道小工具。石板 #A39A8E、每 1 m 一條深一階暖灰接縫（對齊方塊格線）。頂面 = gy + .11（草地頂 gy + .05），略高於草地。
+    // 中間空草坪：涼亭前方完整保留（之後活動用）。
+    // ── 步道小工具。石板 #A39A8E、每 1 m 一條深一階暖灰接縫（對齊方塊格線）。頂面 = gy + .11（草地頂 gy + .05），略高於草地。
     const TY = gy + .05;
-    const seg = (x1, z1, x2, z2, w, w2 = w) => { // 直線步道（w→w2 可做漸寬的放射光芒）
-      const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz), ux = dx / len, uz = dz / len, nx = -uz, nz = ux;
-      const shp = new THREE.Shape([[0, -w / 2], [len, -w2 / 2], [len, w2 / 2], [0, w / 2]].map(([a, b]) => new THREE.Vector2(a, b)));
-      const geo = new THREE.ExtrudeGeometry(shp, { depth: .06, bevelEnabled: false }); geo.rotateX(Math.PI / 2);
-      const o = new THREE.Mesh(geo, MAT.stone); o.position.set(x1, TY + .06, z1); o.rotation.y = -Math.atan2(dz, dx); o.receiveShadow = true; g.add(o);
-      for (let t = 1; t < len - .3; t += 1) { const ww = w + (w2 - w) * t / len, j = box(.05, .012, ww * .96, MAT.stone2, x1 + ux * t, TY + .066, z1 + uz * t, false); j.rotation.y = -Math.atan2(dz, dx); }
-      return { ux, uz, nx, nz, len }; };
     const tiles = (x0, z0, x1, z1) => { // 方格鋪面（整數格，x0<x1、z0<z1），格線接縫
       box(x1 - x0, .06, z1 - z0, MAT.stone, (x0 + x1) / 2, TY + .03, (z0 + z1) / 2, false);
       for (let x = Math.ceil(x0 + .01); x < x1 - .01; x++) box(.05, .012, z1 - z0, MAT.stone2, x, TY + .066, (z0 + z1) / 2, false);
@@ -71,7 +62,7 @@ export function initRoofPark(ctx) {
     const bench = (x, z, wide) => { const sy = gy + .1 + .42, BW = wide ? 2.6 : 1.7; box(BW, .08, .48, MAT.wood, x, sy, z); box(BW, .36, .07, MAT.wood, x, sy + .24, z - .22);
       [-1, 1].forEach(s => box(.1, .42, .44, MAT.stone, x + s * (BW / 2 - .13), gy + .1 + .21, z)); box(BW + .04, .03, .5, MAT.gold, x, sy + .055, z, false);
       if (wide) box(.07, .26, .44, MAT.gold, x, sy + .17, z, false); };
-    // ── 電梯亭（三案共用）：右側電梯井（ELEV_X = W/2 - .75，屋頂樓板 w = W - .12 ⇒ R.w/2 + .06 - .75）往上延伸出屋頂。
+    // ── 電梯亭：右側電梯井（ELEV_X = W/2 - .75，屋頂樓板 w = W - .12 ⇒ R.w/2 + .06 - .75）往上延伸出屋頂。
     //    亭身 2.3×2.4 m 蓋住井道，內縮到矮牆內；石台基、淺木角柱、三面玻璃、後牆石材、金邊；門朝前（+z）一對玻璃門＋金色門框；
     //    小四角錐石屋頂（呼應中央涼亭）。門楣一盞低亮度暖燈（唯一發光件）。門前 2×2 格入口平台、鑲金邊。
     const SHAFT_X = R.w / 2 + .06 - .75, EX = Math.min(SHAFT_X, HW - PT - 1.2), EZ = 0, KW = 2.3, KD = 2.4, KH = 2.9, kb = gy + .1;
@@ -94,13 +85,12 @@ export function initRoofPark(ctx) {
     tiles(PFx0, PFz0, PFx1, PFz1); goldFrame(PFx0, PFz0, PFx1, PFz1, TY + .075);
     const elevator = { x: EX, z: EZ, door: { x: EX, z: kz1 }, pad: [PFx0, PFz0, PFx1, PFz1] };
 
-    // ── 三案共用的固定物：後排三棵角落樹、後方長花圃、右長椅
+    // ── 固定物：後排兩棵角落樹、後方長花圃、右長椅
     tree(-HW + 1.6, -HD + 1.5, 1.05); tree(HW - 1.6, -HD + 1.5, 1.0);
     bed(0, -HD + 1.1, 5.0, .9);
     bench(6.6, -1.9);
-    // ★ Mira 預設位置（B、C 案）：左側長椅（MIRA_BENCH）＋正前方圓形小草坪舞台（MIRA_STAGE）。A 案改到角落小廣場（見下）。
-    let MIRA_BENCH = { x: -6.6, z: -1.9 }, MIRA_STAGE = { x: -6.6, z: 1.1, r: 1.5 }, lampSkip = () => false;
-    if (ROOF_PATH === 'A') {
+    let MIRA_BENCH, MIRA_STAGE, lampSkip;
+    {
       // A＝L 形折線（造型師）：對齊 1 m 方格。入口平台往前（+z）直走 3 m，在右前角轉 90 度，沿前緣內側往左直達左前角小廣場。
       const LZ0 = PFz1 + 2, LZ1 = LZ0 + 2;                 // 橫向段 z 範圍（2 格寬）
       tiles(PFx0, PFz1, PFx1, LZ1);                         // 縱向段（含轉角）
@@ -116,34 +106,7 @@ export function initRoofPark(ctx) {
       MIRA_STAGE = { x: bx, z: (bz + PLz1) / 2 + .35, r: 1.2 }; // 長椅前方的圓形小舞台
       bench(-6.6, -1.9);                                     // 原左長椅保留為一般座位
       lampSkip = x => x < PLx1 + .3;                         // 小廣場範圍內不放燈柱
-    } else if (ROOF_PATH === 'B') {
-      // B＝日出放射（Vera）：中央涼亭當太陽，前方半圓石環（金邊）是「日出」，五道漸寬的光芒石板路放射出去；
-      //    最右一道接電梯入口平台、最左一道停在 Mira 舞台邊，中間三道朝前緣燈柱。
-      const SR0 = 2.75, SR1 = 3.45;
-      const sun = new THREE.Shape(); sun.absarc(0, 0, SR1, 0, Math.PI, false); sun.lineTo(-SR0, 0); sun.absarc(0, 0, SR0, Math.PI, 0, true); sun.lineTo(SR1, 0);
-      const sg = new THREE.ExtrudeGeometry(sun, { depth: .06, bevelEnabled: false, curveSegments: 48 }); sg.rotateX(Math.PI / 2);
-      const so = new THREE.Mesh(sg, MAT.stone); so.position.set(PX, TY + .06, PZ); so.receiveShadow = true; g.add(so);
-      const arcG = r => { const t = new THREE.Mesh(new THREE.TorusGeometry(r, .035, 6, 64, Math.PI), MAT.gold); t.rotation.x = Math.PI / 2; t.position.set(PX, TY + .075, PZ); g.add(t); };
-      arcG(SR1); arcG(SR0);
-      const ray = (tx, tz, stop) => { const dx = tx - PX, dz = tz - PZ, L = Math.hypot(dx, dz), ux = dx / L, uz = dz / L, e = L - stop;
-        seg(PX + ux * SR1, PZ + uz * SR1, PX + ux * e, PZ + uz * e, .7, 1.35); };
-      ray(EX, PFz0 + 1, 1.0 + .05);                           // → 電梯入口平台（平台中心內 1 m 處接上）
-      ray(MIRA_STAGE.x, MIRA_STAGE.z, MIRA_STAGE.r + .15);   // → Mira 舞台邊（不壓到舞台）
-      ray(0, HD, 1.6); ray(-5.2, HD, 1.6); ray(5.2, HD, 1.6); // → 前緣三道
-      bed(-HW + 2.2, HD - 1.3, 3.2, .9); bed(10.2, 6.4, 2.4, .8); tree(HW - 1.5, HD - 1.5, .85);
-    } else {
-      // C＝Y 形（Nova）：電梯入口平台往左一條直線主軸到分岔點，分成兩支：一支上到中央涼亭正前方，一支到 Mira 圓形舞台。
-      const NX = 2.6, NZ = PFz0 + 1.6;                        // 分岔點（涼亭前方偏右）
-      seg(PFx0, PFz0 + 1, NX, NZ, 1.6);                      // 主軸（寬 1.6）
-      const nd = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, .06, 32), MAT.stone); nd.position.set(NX, TY + .03, NZ); nd.receiveShadow = true; g.add(nd); // 分岔小圓台
-      const nr = new THREE.Mesh(new THREE.TorusGeometry(1.15, .035, 6, 40), MAT.gold); nr.rotation.x = Math.PI / 2; nr.position.set(NX, TY + .075, NZ); g.add(nr);
-      seg(NX, NZ, PX + .9, PZ + 1.8 + .15, 1.2);             // 分支 1 → 涼亭台基前緣
-      const sdx = MIRA_STAGE.x - NX, sdz = MIRA_STAGE.z - NZ, sl = Math.hypot(sdx, sdz), so = (MIRA_STAGE.r + .15) / sl;
-      seg(NX, NZ, MIRA_STAGE.x - sdx * so, MIRA_STAGE.z - sdz * so, 1.2); // 分支 2 → Mira 舞台邊
-      bed(-HW + 2.2, HD - 1.3, 3.2, .9); bed(7.4, NZ + 2.0, 3.0, .8); bed(-1.6, NZ + 2.6, 3.2, .8); tree(HW - 1.5, HD - 1.5, .85);
     }
-    // Mira 位置：長椅（B、C 在左側 -6.6；A 在小廣場的雙人椅已經放好）
-    if (ROOF_PATH !== 'A') bench(MIRA_BENCH.x, MIRA_BENCH.z);
     // ★ Mira 活動區：圓形小草坪舞台（MIRA_STAGE）：石基座＋玉綠草面＋金邊，無文字無標誌。
     cyl(MIRA_STAGE.r, MIRA_STAGE.r + .05, .2, MAT.stone, MIRA_STAGE.x, gy + .2, MIRA_STAGE.z, 40);
     cyl(MIRA_STAGE.r - .12, MIRA_STAGE.r - .12, .04, MAT.jade, MIRA_STAGE.x, gy + .32, MIRA_STAGE.z, 40);
@@ -152,13 +115,13 @@ export function initRoofPark(ctx) {
     const LZ = HD - PT - .55, LN = 9;
     for (let i = 0; i < LN; i++) { const x = -A + 1.2 + i * (2 * A - 2.4) / (LN - 1); if (lampSkip(x)) continue;
       box(.06, .8, .06, MAT.gold, x, gy + .1 + .4, LZ, false); box(.16, .04, .16, MAT.gold, x, gy + .1 + .82, LZ, false); box(.11, .12, .11, LAMP, x, gy + .1 + .9, LZ, false); }
-    g.userData = { MIRA_BENCH, MIRA_STAGE, y: gy + .1, path: ROOF_PATH };
-    window.P7_roofPark = { y: gy + .1, path: ROOF_PATH, miraBench: MIRA_BENCH, miraStage: MIRA_STAGE, pavilion: { x: PX, z: PZ }, elevator };
+    g.userData = { MIRA_BENCH, MIRA_STAGE, y: gy + .1, path: 'A' };
+    window.P7_roofPark = { y: gy + .1, path: 'A', miraBench: MIRA_BENCH, miraStage: MIRA_STAGE, pavilion: { x: PX, z: PZ }, elevator };
     // 截圖用：roofpark＝右前上方近看整個屋頂
     // 截圖用：roofpathclose＝從左前方近看電梯亭、入口平台和步道接口
     if (SHOT === 'roofpathclose' && camera && !cam) { cam = true; controls.minDistance = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.maxDistance = 200; controls.minPolarAngle = .2;
       target.set(EX - 3.5, y0 + 1, 3.5); camPos.set(EX - 14, y0 + 10.5, 20); camera.position.copy(camPos); controls.target.copy(target); }
-    // 截圖用：roofpath＝退遠一點、看得到整片屋頂＋右側電梯亭（步道三案比較用）
+    // 截圖用：roofpath＝退遠一點、看得到整片屋頂＋右側電梯亭
     if (SHOT === 'roofpath' && camera && !cam) { cam = true; controls.minDistance = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.maxDistance = 200; controls.minPolarAngle = .2;
       target.set(0, y0, 1.5); camPos.set(9, y0 + 27, 39); camera.position.copy(camPos); controls.target.copy(target); }
     if (SHOT === 'roofpark' && camera && !cam) { cam = true; controls.minDistance = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.maxDistance = 200; controls.minPolarAngle = .2;
