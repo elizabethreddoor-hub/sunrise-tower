@@ -1,8 +1,8 @@
-// 預覽 floors-6-7 v0.1：加蓋 6F 網紅間、7F 戰情室（公開名稱只用「戰情室」）。純場景，不碰後端與心跳。
+// 預覽 floors-6-7 v0.2：加蓋 6F 網紅間、7F 戰情室（公開名稱只用「戰情室」）。純場景，不碰後端與心跳。
 // 6F：左右各一間直播間（左＝Mira、右＝Nova；環形補光燈、三腳架攝影機、商品小桌、商品層架、背景板），
 //     中間是小會議廳（本層會議桌 6 張椅子，作息表「開會」就坐這裡），電梯出來沿前方走道（z 2.7）可走到中間。
-// 7F：深色房間，上下雙排電腦螢幕（每個工作站 3＋3），後排墊高，後牆大螢幕牆兩排；螢幕只有抽象折線、長條、圓環、點陣，
-//     沒有任何數字或文字。目前沒人進駐，只留空椅子。
+// 7F：深色房間（v0.2 簡化）：正中央一張四人座桌、桌上 8 台電腦（上下雙排螢幕）；左右兩側各一排伺服器機櫃式工業電腦（狀態燈閃爍）。
+//     螢幕只有抽象折線、長條、圓環、點陣，沒有任何數字或文字。目前沒人進駐，只留 4 張空椅子。
 // 座標與 index.html 一致：寬 30、深 20、樓高 4.68；電梯井在 x = ±14.25、z = 0。站位與會議椅座標在 index.html 的 STATION / MCH6。
 export function initFloors67(ctx) {
   const { THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target } = ctx, D = document;
@@ -75,7 +75,7 @@ export function initFloors67(ctx) {
   }
 
   // ===================== 7F 戰情室 =====================
-  const SCR = [];
+  const SCR = []; let RACKS = 0;
   if (floorY['7F'] !== undefined) {
     const y0 = floorY['7F'] + T, grp = new THREE.Group(); grp.name = 'WARROOM_7F'; scene.add(grp);
     const add = (g, m, x, y, z) => { const o = new THREE.Mesh(g, m); o.position.set(x, y0 + y, z); o.castShadow = true; o.receiveShadow = true; o.raycast = () => {}; grp.add(o); return o; };
@@ -95,31 +95,45 @@ export function initFloors67(ctx) {
         g.strokeStyle = 'rgba(201,162,78,.8)'; g.lineWidth = 1.5; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(40 + R() * 60, 40 + R() * 80); g.quadraticCurveTo(128, 10, 160 + R() * 70, 40 + R() * 80); g.stroke(); } }
       const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; if (k === 0 || k === 1) { t.wrapS = THREE.RepeatWrapping; } return t; };
     const TEX = [0, 1, 2, 3].map(mkTex), SM = TEX.map(t => new THREE.MeshBasicMaterial({ map: t, toneMapped: false, color: 0xE0E0E0 }));
-    const lists = [[], [], [], []], frames = [];
+    const lists = [[], [], [], []], frames = [], o3 = new THREE.Object3D();
     const screen = (w, h, x, y, z, ry, k) => { lists[k].push({ w, h, x, y, z, ry }); frames.push({ w: w + .05, h: h + .05, x, y, z, ry }); };
-    // 後牆大螢幕牆：上下兩排各 7 面
-    for (let r = 0; r < 2; r++) for (let i = 0; i < 7; i++) screen(1.85, 1.0, -11.4 + i * 3.8, 2.75 + r * 1.1, -9.66, 0, (i + r * 3) % 4);
-    // 工作站：三排，面向後牆（人背對鏡頭坐，螢幕朝鏡頭方向），後排墊高；每站上下兩排各 3 面螢幕（左右兩面略向內轉）
-    const ROWS = [{ z: -6.6, h: .5 }, { z: -3.4, h: .25 }, { z: -.2, h: 0 }], XS = [-10, -5, 0, 5, 10];
-    ROWS.forEach((R, ri) => { if (R.h) { add(B(25, R.h, 2.9), DK.plat, 0, R.h / 2, R.z + .45); add(B(25, .02, .04), EDGE2, 0, R.h + .01, R.z + 1.88); }
-      XS.forEach((x, xi) => { const by = R.h; add(B(4.1, .06, .85), DK.deskTop, x, by + .76, R.z); add(B(4.1, .7, .06), DK.desk, x, by + .37, R.z - .4); [-1, 1].forEach(s => add(B(.06, .74, .8), DK.desk, x + s * 2.0, by + .37, R.z));
-        add(B(4.1, .015, .02), EDGE, x, by + .79, R.z + .43);
-        [-1, 0, 1].forEach(c => { const ry = c * -.28, sx = x + c * 1.24, sz = R.z - .2 + Math.abs(c) * .14; [0, 1].forEach(row => screen(1.18, .66, sx, by + 1.2 + row * .72, sz, ry, (xi + ri + c + 1 + row * 2) % 4)); });
-        add(B(.08, 1.4, .08), DK.frame, x, by + 1.5, R.z - .32); add(B(.5, .03, .22), DK.frame, x, by + .8, R.z + .1);
-        // 空椅子（沒人進駐）
-        [-1.1, 1.1].forEach(dx => { const cx = x + dx, cz = R.z + .95; add(B(.55, .1, .55), DK.chair, cx, by + .48, cz); add(B(.55, .66, .08), DK.chair, cx, by + .86, cz + .26); add(B(.5, .03, .5), DK.seat, cx, by + .54, cz); add(new THREE.CylinderGeometry(.04, .04, .4, 6), DK.frame, cx, by + .22, cz); add(new THREE.CylinderGeometry(.28, .28, .04, 5), DK.frame, cx, by + .03, cz); }); }); });
+    // v0.2 簡化：樓層正中央一張四人座桌（前後各 2 張空椅），桌上 8 台電腦（中線背對背，前後各 4 台），每台上下雙排螢幕；
+    //       左右兩側各一排伺服器機櫃式工業電腦（通風格柵＋小狀態燈閃爍）。拿掉舊的 15 站工作站與後牆螢幕牆。
+    // 電梯口前方走道（z 2.7）保持淨空，加一條深色走道＋青色邊線。
+    add(B(27.2, .02, 1.5), DK.plat, 0, .035, 2.7); [-1, 1].forEach(s => add(B(27.2, .02, .04), EDGE, 0, .045, 2.7 + s * .75));
+    const TZ = -1.6; // 桌子中心
+    add(B(6.6, .02, 4.8), DK.plat, 0, .03, TZ); [-1, 1].forEach(s => { add(B(6.6, .02, .04), EDGE2, 0, .045, TZ + s * 2.4); add(B(.04, .02, 4.8), EDGE2, s * 3.3, .045, TZ); });
+    add(B(4.6, .07, 1.9), DK.deskTop, 0, .76, TZ); add(B(4.64, .02, 1.94), EDGE, 0, .725, TZ);
+    [-1, 1].forEach(s => add(B(.08, .72, 1.6), DK.desk, s * 2.1, .36, TZ)); add(B(4.0, .5, .06), DK.desk, 0, .45, TZ);
+    // 8 台電腦：x 四個位置 × 前後兩側；螢幕朝坐的人（前側朝 +z、後側朝 -z）
+    [-1.65, -.55, .55, 1.65].forEach((x, xi) => [1, -1].forEach(f => { const ry = f > 0 ? 0 : Math.PI, sz = TZ + f * .12;
+      add(B(.07, 1.25, .07), DK.frame, x, 1.38, TZ); add(B(.4, .03, .26), DK.frame, x, .81, TZ);
+      [0, 1].forEach(row => screen(.98, .55, x, 1.18 + row * .6, sz, ry, (xi + row * 2 + (f > 0 ? 0 : 1)) % 4));
+      add(B(.62, .02, .2), DK.frame, x, .8, TZ + f * .62); add(B(.08, .02, .12), DK.chair, x + .45, .8, TZ + f * .62); }));
+    // 4 張空椅子（前側 2、後側 2；沒人進駐）
+    [[-1.1, 1], [1.1, 1], [-1.1, -1], [1.1, -1]].forEach(([dx, f]) => { const cz = TZ + f * 1.5; add(B(.55, .1, .55), DK.chair, dx, .48, cz); add(B(.55, .66, .08), DK.chair, dx, .86, cz + f * .26); add(B(.5, .03, .5), DK.seat, dx, .54, cz); add(new THREE.CylinderGeometry(.04, .04, .4, 6), DK.frame, dx, .22, cz); add(new THREE.CylinderGeometry(.28, .28, .04, 5), DK.frame, dx, .03, cz); });
+    // 左右兩排伺服器機櫃（每排 7 櫃，正面朝鏡頭方向 +z）：外殼、通風格柵、上方小螢幕條、狀態燈
+    const RK = { body: L(0x2A3346), face: L(0x36425A), vent: L(0x0E131D) }, LED = [GLOW(0x4FE39A, .95), GLOW(0x2AD1C9, .95), GLOW(0xE9B44C, .95)], leds = [[], [], []];
+    [-1, 1].forEach(s => { const RZ = -6.4; add(B(6.2, .08, 1.3), DK.plat, s * 9.5, .04, RZ); add(B(6.2, .02, .04), EDGE2, s * 9.5, .09, RZ + .66);
+      for (let i = 0; i < 7; i++) { const x = s * (6.8 + i * .86);
+        add(B(.8, 2.3, 1.0), RK.body, x, 1.23, RZ); add(B(.72, 2.18, .02), RK.face, x, 1.23, RZ + .51);
+        for (let u = 0; u < 9; u++) { const uy = .32 + u * .22; add(B(.5, .1, .02), RK.vent, x - .06, uy, RZ + .525); for (let v = 0; v < 3; v++) leds[(i * 3 + u + v * 2 + (s > 0 ? 1 : 0)) % 3].push([x + .24 + (v - 1) * .055, uy, RZ + .53]); }
+        add(B(.72, .03, .03), EDGE, x, 2.36, RZ + .52); } });
+    { const lg = B(.035, .035, .02); leds.forEach((li, k) => { const im = new THREE.InstancedMesh(lg, LED[k], li.length); li.forEach((p, i) => { o3.position.set(p[0], y0 + p[1], p[2]); o3.rotation.set(0, 0, 0); o3.scale.set(1, 1, 1); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); }); im.raycast = () => {}; im.name = 'WAR_LEDS_' + k; grp.add(im); }); }
+    RACKS = 14; { const tl = new THREE.PointLight(0xCFE2FF, 6, 9, 1.4); tl.position.set(0, y0 + 3.4, TZ + 1); grp.add(tl); }
+    if (!SHOT) { const base = LED.map(m => m.color.clone()); let t0 = performance.now(); (function blink() { requestAnimationFrame(blink); const t = (performance.now() - t0) / 1000; LED.forEach((m, k) => m.color.copy(base[k]).multiplyScalar(.35 + .65 * (Math.sin(t * (2.2 + k * 1.3) + k * 2) > -.2 ? 1 : 0))); })(); }
     // 合併成 instanced：每種畫面一組、外框一組
-    const o3 = new THREE.Object3D(), pg = new THREE.PlaneGeometry(1, 1);
+    const pg = new THREE.PlaneGeometry(1, 1);
     lists.forEach((li, k) => { const im = new THREE.InstancedMesh(pg, SM[k], li.length); li.forEach((s, i) => { o3.position.set(s.x, y0 + s.y, s.z + .03 * Math.cos(s.ry)); o3.rotation.set(0, s.ry, 0); o3.scale.set(s.w, s.h, 1); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); }); im.raycast = () => {}; im.name = 'WAR_SCREENS_' + k; grp.add(im); SCR.push(im); });
     { const im = new THREE.InstancedMesh(B(1, 1, .05), DK.frame, frames.length); frames.forEach((s, i) => { o3.position.set(s.x, y0 + s.y, s.z); o3.rotation.set(0, s.ry, 0); o3.scale.set(s.w, s.h, 1); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); }); im.castShadow = true; im.raycast = () => {}; grp.add(im); }
-    // 招牌「戰情室」（後牆螢幕牆上方，小字）＋幾盞低亮度藍光
+    // 招牌「戰情室」（後牆中央，小字）＋幾盞低亮度藍光
     { const cv = D.createElement('canvas'); cv.width = 512; cv.height = 96; const g = cv.getContext('2d'); g.fillStyle = '#0B0F18'; g.fillRect(0, 0, 512, 96); g.fillStyle = '#2AD1C9'; g.font = 'bold 54px "Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('戰情室', 256, 50);
-      const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const s = new THREE.Mesh(new THREE.PlaneGeometry(2.0, .38), new THREE.MeshBasicMaterial({ map: tx, toneMapped: false, color: 0xCCCCCC })); s.position.set(0, y0 + 1.95, -9.68); s.raycast = () => {}; grp.add(s); }
-    [-8, 0, 8].forEach(x => { const l = new THREE.PointLight(0x5A8FE0, 6, 14, 1.4); l.position.set(x, y0 + 3.6, -1); grp.add(l); });
+      const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const s = new THREE.Mesh(new THREE.PlaneGeometry(2.0, .38), new THREE.MeshBasicMaterial({ map: tx, toneMapped: false, color: 0xCCCCCC })); s.position.set(0, y0 + 2.9, -9.68); s.raycast = () => {}; grp.add(s); }
+    [-9.5, 0, 9.5].forEach(x => { const l = new THREE.PointLight(0x5A8FE0, x ? 5 : 7, 14, 1.4); l.position.set(x, y0 + 3.6, x ? -4 : -1); grp.add(l); });
     // 折線、長條畫面慢慢往左捲動（截圖時不動）
     if (!SHOT) { let lt = performance.now(); (function tick() { requestAnimationFrame(tick); const n = performance.now(), dt = (n - lt) / 1000; lt = n; TEX[0].offset.x += dt * .03; TEX[1].offset.x += dt * .015; })(); }
   }
-  window.P7_floors67 = { screens: SCR.reduce((a, m) => a + m.count, 0) };
+  window.P7_floors67 = { screens: SCR.reduce((a, m) => a + m.count, 0), racks: RACKS };
   if (SHOT === 'f6' && floorY['6F'] !== undefined) { const y = floorY['6F'] + T; sync('6F'); set(new THREE.Vector3(0, y + 1.9, -2), new THREE.Vector3(3.2, y + 4.2, 37)); }
   if (SHOT === 'f6l' && floorY['6F'] !== undefined) { const y = floorY['6F'] + T; sync('6F'); set(new THREE.Vector3(-8.8, y + 1.3, -3.6), new THREE.Vector3(-7.6, y + 3.4, 6.5)); }
   if (SHOT === 'f7' && floorY['7F'] !== undefined) { const y = floorY['7F'] + T; sync('7F'); set(new THREE.Vector3(0, y + 1.9, -2), new THREE.Vector3(3.2, y + 4.2, 37)); }
