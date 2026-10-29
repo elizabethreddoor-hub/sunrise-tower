@@ -17,7 +17,7 @@ body.nogl #hint{display:none}
 .ntag small{display:block;font-size:10px;color:#5A6B7D;text-align:center;line-height:1.2}
 #schedCap{position:absolute;left:10px;bottom:12px;z-index:5;color:#d8cfc4;font-size:11px;background:rgba(20,18,20,.6);padding:3px 10px;border-radius:10px;pointer-events:none}body.team #schedCap,body.nogl #schedCap{display:none}@media (max-width:640px){#schedCap{bottom:42px}}
 </style></head><body>
-<div id="three"></div><div id="fbar" role="group" aria-label="樓層"><button data-f="5F" title="季報書房">5F</button><button data-f="RF">4F</button><button data-f="3F">3F</button><button data-f="2F">2F</button><button data-f="1F">1F</button><button data-f="all" class="on">全景</button></div><button id="tvk" title="團隊" aria-label="團隊觀看">🔑</button><div id="hint">拖曳可微轉、滾輪縮放；點大樓看公司服務資訊</div><div id="schedCap">人物動作為作息演出，實際狀態見名牌</div>
+<div id="three"></div><div id="fbar" role="group" aria-label="樓層"><button data-f="7F" title="戰情室">7F</button><button data-f="6F" title="網紅間">6F</button><button data-f="5F" title="季報書房">5F</button><button data-f="RF">4F</button><button data-f="3F">3F</button><button data-f="2F">2F</button><button data-f="1F">1F</button><button data-f="all" class="on">全景</button></div><button id="tvk" title="團隊" aria-label="團隊觀看">🔑</button><div id="hint">拖曳可微轉、滾輪縮放；點大樓看公司服務資訊</div><div id="schedCap">人物動作為作息演出，實際狀態見名牌</div>
 <div id="info" role="dialog"><h2>公司服務資訊<button id="ix" aria-label="關閉">×</button></h2><div class="b">
 <span class="ex">範例文字・待填入</span>
 <p>【範例】這裡放公司簡介，一到兩句話說明我們是誰、做什麼。</p>
@@ -74,9 +74,10 @@ const FM = {
   '2F': { wall: nm('F2_wall', 0x1F2326), floor: nm('F2_floor', 0x2B3034), main: nm('F2_main', 0x2A8C9E), accent: nm('F2_accent', 0x3FAE6A), trim: nm('F2_trim', 0xB48C4C, GOLD), light: nm('F2_light', 0x2A8C9E) },
   '1F': { wall: nm('F1_wall', 0xEEF2F6), floor: nm('F1_floor', 0xE9EDF2), trim: nm('F1_trim', 0xF08A24), main: nm('F1_main', 0x2F6FB3), accent: nm('F1_accent', 0x547A5C), light: nm('F1_light', 0xFFFFFF, LAMP(0xFFFFFF)) } 
 };
-FM['5F'] = FM['1F'];
+FM['5F'] = FM['1F']; FM['6F'] = FM['1F']; FM['7F'] = FM['1F']; // 預覽 floors-6-7：加蓋 6F 網紅間、7F 戰情室（外殼同款，內裝在 floors67.js）
 Object.keys(FM).forEach(k => FM[k] = FM['1F']);
 const STYLE = {
+  '7F': { light: 0x6FA8FF, lk: .6, fill: 0x1F4E85, fillK: .2, label: '7F' }, '6F': { light: 0xFFF1E6, fill: 0xE7A9B5, fillK: .2, label: '6F' },
   '5F': { light: 0xFFD9A8, fill: 0xC9894A, fillK: .25, label: '5F' },
   RF: { light: 0xF4F8FF, fill: 0xC8503C, fillK: .25, label: '4F' }, '3F': { light: 0xF4F8FF, fill: 0xB0444C, fillK: .2, label: '3F' },
   '2F': { light: 0xF4F1EA, fill: 0xE8E4DA, fillK: .2, label: '2F' }, '1F': { light: 0xF4F8FF, fill: 0xC9A45C, fillK: .2, label: '1F' }
@@ -195,11 +196,11 @@ function build(floors) {
     [-1, 1].forEach(s => { mesh(B(.04, FH - T, D - .3), GLASS, s * (W / 2 - .05), y + T + (FH - T) / 2, 0, world, false); for (let k = -2; k <= 2; k++) mesh(B(.04, FH - .2, .04), SH.main, s * (W / 2 - .02), y + FH / 2, k * (D / 4.4), world, false); });
     if (0) mesh(B(.04, FH - T - .6, 3.2), RED3, -(W / 2 - .25), y + T + (FH - T - .6) / 2, -3.6, world, false); 
     if (fid === 'RF' || fid === '1F') mesh(B(W - .5, .1, .03), m.trim, 0, y + T + .05, BZ + .02, world, false);   
-    const g = new THREE.Group(); g.name = 'F' + st.label.replace('F', '') + '_furniture'; world.add(g); furnGroups[f.floor_id] = g; if (!f.locked) { if (fid === '1F') lobby1F(y + T, g, m); else if (fid !== '5F') OFFICE_FLOORS.push(y + T); buildExtras(f.floor_id, y + T, g, m); mergeStatic(g); } else mesh(B(W - .3, FH - T - .04, D - .3), FROST, 0, y + T + (FH - T) / 2, 0, world, false); 
+    const g = new THREE.Group(); g.name = 'F' + st.label.replace('F', '') + '_furniture'; world.add(g); furnGroups[f.floor_id] = g; if (!f.locked) { if (fid === '1F') lobby1F(y + T, g, m); else if (fid !== '5F' && fid !== '6F' && fid !== '7F') OFFICE_FLOORS.push(y + T); buildExtras(f.floor_id, y + T, g, m); mergeStatic(g); } else mesh(B(W - .3, FH - T - .04, D - .3), FROST, 0, y + T + (FH - T) / 2, 0, world, false); 
     
     { const lite = matchMedia('(pointer: coarse)').matches || innerWidth < 760; 
       const WL = [[-(W / 2 - 2.2), 0], [W / 2 - 2.2, 0], [0, BZ + 2.2], [0, D / 2 - 2.2]].filter((p, j) => !lite || j < 2);
-      WL.forEach(p => { const Lw = new THREE.PointLight(st.light, (lite ? 9 : 6) * (fid === '1F' ? 1.1 : 1), fid === '1F' ? 26 : 18, 1.2); Lw.position.set(p[0], y + FH - .9, p[1]); Lw.name = fid + '_wallLight'; world.add(Lw); }); }
+      WL.forEach(p => { const Lw = new THREE.PointLight(st.light, (lite ? 9 : 6) * (fid === '1F' ? 1.1 : 1) * (st.lk || 1), fid === '1F' ? 26 : 18, 1.2); Lw.position.set(p[0], y + FH - .9, p[1]); Lw.name = fid + '_wallLight'; world.add(Lw); }); }
     
     mesh(new THREE.PlaneGeometry(W - .5, FH - .2), GLASS, 0, y + FH / 2, D / 2, world, false);
     for (let k = -4; k <= 4; k++) if (i || Math.abs(k) > 1) mesh(B(.04, FH - .2, .04), SH.main, k * (W / 8.4), y + FH / 2, D / 2 + .01, world, false);
@@ -256,7 +257,7 @@ function camHome(H) { towerH = H; const a = innerWidth / Math.max(1, innerHeight
   const dist = Math.max((H + 6) / 2 / tv, (hw + 2) / th) + D1 / 2; setCam(new THREE.Vector3(cx0, (H + 4) / 2, 0), dist, true, a < 1); }
 function setCam(t, dist, now, straight) { from.p.copy(camera.position); from.t.copy(controls.target); target.copy(t); camPos.set(straight ? 0 : t.x + dist * .12, t.y + dist * .05, t.z + dist); tweenT = now ? 1 : 0; if (now) { camera.position.copy(camPos); controls.target.copy(target); } }
 controls.maxDistance = 260; camera.far = 1600; controls.maxPolarAngle = 1.55; camera.updateProjectionMatrix();
-build([{ floor_id: '5F' }, { floor_id: 'RF' }, { floor_id: '3F' }, { floor_id: '2F' }, { floor_id: '1F' }]);
+build([{ floor_id: '7F' }, { floor_id: '6F' }, { floor_id: '5F' }, { floor_id: 'RF' }, { floor_id: '3F' }, { floor_id: '2F' }, { floor_id: '1F' }]);
 { const OM = { desk: mat(0xFFFFFF), edge: mat(0xF08A24), chair: DS(mat(0xF08A24)), screen: mat(0x5A6B7D), pot: DS(mat(0xF4F6F9)), leaf: DS(mat(0x5E9E6A)), table: mat(0xF4F6F9) };
   const U = (parts) => mergeGeometries(parts.map(q => { const gg = q[0].index ? q[0].toNonIndexed() : q[0].clone(); gg.deleteAttribute('uv'); gg.deleteAttribute('normal'); gg.translate(q[1], q[2], q[3]); gg.computeVertexNormals(); return gg; }));
   const deskG = U([[B(1.6, .76, .8), 0, .38, 0]]), edgeG = B(1.6, .04, .02), chairG = U([[new THREE.PlaneGeometry(.5, .5).rotateX(-Math.PI / 2), 0, .5, 0], [new THREE.PlaneGeometry(.5, .5), 0, .75, .25]]), scrG = B(.6, .36, .04);
@@ -280,8 +281,11 @@ for (let i = 0; i < NP; i++) { const p = { fid: FL[i], sc: 1.15, ph: Math.random
 const o3 = new THREE.Object3D(), pv = new THREE.Object3D(); o3.add(pv);
 function place(im, i, p, lx, ly, swing, part) { o3.position.set(p.x, p.y, p.z); o3.rotation.set(0, p.ry, 0); o3.scale.setScalar(p.sc); const h = PART[part][0].parameters.height;
   pv.position.set(lx, ly + h, 0); pv.rotation.set(swing, 0, 0); pv.updateMatrix(); o3.updateMatrix(); const m = new THREE.Matrix4().makeTranslation(0, -h / 2, 0); im.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(o3.matrix, pv.matrix).multiply(m)); }
-const ROSTER_FALLBACK = {"residents": [{"id": "mira", "floor": 3, "desk": 1, "skin": "mira", "name": "Mira"}, {"id": "vera", "floor": 3, "desk": 2, "skin": "vera", "name": "Vera"}, {"id": "stylist", "floor": 3, "desk": 4, "skin": "stylist", "name": "造型師"}, {"id": "contract", "floor": 5, "desk": 4, "skin": "contract", "name": "合約管家"}, {"id": "engineer", "floor": 5, "desk": 7, "form": "cube", "palette": "ENG", "name": "軟體工程精靈"}, {"id": "fx", "floor": 3, "desk": 7, "form": "cube", "palette": "FX", "name": "外匯小精靈"}, {"id": "koc", "floor": 3, "desk": 6, "form": "cube", "palette": "KOC", "name": "KOC小精靈"}, {"id": "nova", "floor": 3, "desk": 8, "skin": "nova", "name": "Nova"}]};
-const FLOOR_ID = { 1: '1F', 2: '2F', 3: '3F', 4: 'RF', 5: '5F' }, RES = [];
+const ROSTER_FALLBACK = {"residents": [{"id": "mira", "floor": 6, "desk": 1, "skin": "mira", "name": "Mira"}, {"id": "vera", "floor": 3, "desk": 2, "skin": "vera", "name": "Vera"}, {"id": "stylist", "floor": 3, "desk": 4, "skin": "stylist", "name": "造型師"}, {"id": "contract", "floor": 5, "desk": 4, "skin": "contract", "name": "合約管家"}, {"id": "engineer", "floor": 5, "desk": 7, "form": "cube", "palette": "ENG", "name": "軟體工程精靈"}, {"id": "fx", "floor": 3, "desk": 7, "form": "cube", "palette": "FX", "name": "外匯小精靈"}, {"id": "koc", "floor": 3, "desk": 6, "form": "cube", "palette": "KOC", "name": "KOC小精靈"}, {"id": "nova", "floor": 6, "desk": 2, "skin": "nova", "name": "Nova"}]};
+const FLOOR_ID = { 1: '1F', 2: '2F', 3: '3F', 4: 'RF', 5: '5F', 6: '6F', 7: '7F' }, RES = [];
+// 預覽 floors-6-7：6F 網紅間不用 3×3 辦公桌，改用直播間主播椅當座位。desk 1 = 左間（Mira）、desk 2 = 右間（Nova）。
+// ax = 離開座位時走的直行走道（在商品桌外側，不穿過桌子、補光燈、三腳架）。7F 戰情室目前沒有座位分配（只放空椅子）。
+const STATION = { '6F': { 1: { x: -8.8, z: -4.4, ax: -10.6 }, 2: { x: 8.8, z: -4.4, ax: 10.6 } } };
 const SKIN_UV = { head: [0, 0, 8, 8, 8], hat: [32, 0, 8, 8, 8], body: [16, 16, 8, 12, 4], jacket: [16, 32, 8, 12, 4], rarm: [40, 16, 4, 12, 4], rsleeve: [40, 32, 4, 12, 4],
   larm: [32, 48, 4, 12, 4], lsleeve: [48, 48, 4, 12, 4], rleg: [0, 16, 4, 12, 4], rpants: [0, 32, 4, 12, 4], lleg: [16, 48, 4, 12, 4], lpants: [0, 48, 4, 12, 4] };
 function skinGeo(key, w, h, d, inf, px, oy) { const [u, v, W, H, D] = SKIN_UV[key], g = new THREE.BoxGeometry((w + inf * 2) * px, (h + inf * 2) * px, (d + inf * 2) * px);
@@ -305,9 +309,9 @@ function setRoster(r) { ((r && r.residents) || []).forEach(a => { if (a && a.id 
   window.P7_CUBE_ROSTER = all.filter(a => a.form === 'cube').map(a => Object.assign({}, a, { fid: FLOOR_ID[a.floor] })); 
   const list = all.filter(a => a.form !== 'cube').slice(0, RMAX);
   RES.forEach(p => { p.tag.remove(); if (p.bub) p.bub.remove(); if (p.sayEl) p.sayEl.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0;
-  list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], d = deskPos(+a.desk || 0), sc = +a.scale || 1;
+  list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], stn = STATION[fid] && STATION[fid][+a.desk], d = stn ? [stn.x, stn.z + .8] : deskPos(+a.desk || 0), sc = +a.scale || 1;
     const p = { res: true, id: String(a.id || a.skin || ''), bld: a.building || 'sunrise', want: null, dim: 0, fid, sc, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0 };
-    p.g = buildBlock(a.skin || a.id, sc);
+    if (stn) p.ax = stn.ax; p.g = buildBlock(a.skin || a.id, sc);
     const tag = document.createElement('div'); tag.className = 'ntag'; box.appendChild(tag); p.tag = tag;
     const bub = document.createElement('div'); bub.className = 'bub'; box.appendChild(bub); p.bub = bub; RES.push(p); });
   RES.forEach(p => { p.bubT = ''; }); if (window.P7_cubeRoster) window.P7_cubeRoster(window.P7_CUBE_ROSTER); if (LAST_ST) applyStatus(LAST_ST); else schedAll(); }
@@ -374,20 +378,20 @@ const SPD = Math.min(20, Math.max(1, +(Q.get('spd') || 1))); // 除錯：spd=倍
 const backOf = p => p.cube ? 1.4 : .6; // 座位後方的走道距離（人＝椅子後 0.6 m；方塊精靈的位置在桌子上方，退 1.4 m 到椅子後）
 function plan(p) { const g = p.g2; p.pend = 0; p.path = [];
   if (p.fid === g.fid && Math.hypot(p.x - g.x, p.z - g.z) < .05) { p.act = g.act; p.ry = g.ry; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; } p.act = 'walk'; p.seat = 0;
-  const exitM = p.atMeet && p.mc && p.fid === p.mcf; if (exitM) p.path.push(...meetExit(p.mc)); p.atMeet = g.meet ? 1 : 0; p.mc = g.meet ? [g.x, g.z, g.ry] : null; p.mcf = g.meet ? g.fid : null; // 從會議桌離開：先退回椅子後方→繞出桌子→走道
+  const exitM = p.atMeet && p.mc && p.fid === p.mcf; if (exitM) p.path.push(...meetExit(p.mc, p.mcf)); p.atMeet = g.meet ? 1 : 0; p.mc = g.meet ? [g.x, g.z, g.ry] : null; p.mcf = g.meet ? g.fid : null; // 從會議桌離開：先退回椅子後方→繞出桌子→走道
   const atHome = Math.hypot(p.x - p.home[0], p.z - p.home[1]) < .05 && p.fid === p.hf;
   if (atHome) p.path.push([p.home[0], p.home[1] - backOf(p)]); // v0.4：起身往椅子後方退（不再穿過自己的桌子）
   const dst = []; if (g.act === 'sit' || g.act === 'rest') dst.push([g.x, g.z - backOf(p)]); else if (g.act === 'msit') dst.push([g.x, g.z + (g.ry ? .6 : -.6)]); dst.push([g.x, g.z]);
   if (g.fid !== p.fid) { const sd = p.x >= 0 ? 1 : -1, ex = sd * 13.4, sx = sd * ELEV_X;
     if (p.fid === '1F') p.path.push(...lobbyChain(p.x, p.z), [sd * 12, HALL_Z]);
-    else if (atHome) { const ax = nearAisle(p.x), cz = CZ(p.fid); p.path.push([ax, p.home[1] - backOf(p)], [ax, cz], [ex, cz]); } // v0.4：離開座位先走桌間走道→樓層橫向走道→電梯口，不斜穿桌子
+    else if (atHome) { const ax = AX(p, p.x), cz = CZ(p.fid); p.path.push([ax, p.home[1] - backOf(p)], [ax, cz], [ex, cz]); } // v0.4：離開座位先走桌間走道→樓層橫向走道→電梯口，不斜穿桌子
     else if (exitM) p.path.push([ex, CZ(p.fid)]);
     p.path.push([ex, .9], { door: p.fid, sd }, [sx, .9], [sx, 0], { lift: g.fid, sd }, [sx, .9], [ex, .9]);
-    if (g.fid === '1F') p.path.push([sd * 12, HALL_Z], ...lobbyChain(g.x, g.z).reverse()); else { const cz = CZ(g.fid); p.path.push([ex, cz]); if (g.via) g.via.forEach(v => p.path.push(v)); else if (/sit|rest/.test(g.act)) { const ax = nearAisle(g.x); p.path.push([ax, cz], [ax, g.z - backOf(p)]); } } }
+    if (g.fid === '1F') p.path.push([sd * 12, HALL_Z], ...lobbyChain(g.x, g.z).reverse()); else { const cz = CZ(g.fid); p.path.push([ex, cz]); if (g.via) g.via.forEach(v => p.path.push(v)); else if (/sit|rest/.test(g.act)) { const ax = AX(p, g.x); p.path.push([ax, cz], [ax, g.z - backOf(p)]); } } }
   else if (g.fid === '1F' && lobbyZone(p.x, p.z) === lobbyZone(g.x, g.z) && lobbyZone(g.x, g.z) !== 'hall') { /* 同一區（門外、咖啡吧、廁所）直接走 */ }
   else if (g.fid === '1F') { const a = lobbyChain(p.x, p.z), b = lobbyChain(g.x, g.z).reverse(); if (a.length > 1 || b.length > 1) p.path.push(...a, ...b); }
   else if (g.via) g.via.forEach(v => p.path.push(v));
-  else if (exitM && /sit|rest/.test(g.act)) { const ax = nearAisle(g.x); p.path.push([ax, 2.7], [ax, g.z - backOf(p)]); } // 開完會回座位：沿走道再進座位排
+  else if (exitM && /sit|rest/.test(g.act)) { const ax = AX(p, g.x); p.path.push([ax, 2.7], [ax, g.z - backOf(p)]); } // 開完會回座位：沿走道再進座位排
   p.path.push(...dst);
   if (ROUTE_DBG) window.P7_routes.push({ id: p.id, from: p.fid, to: g.fid, start: [p.x, p.z], path: p.path.map(w => Array.isArray(w) ? w.slice() : Object.assign({}, w)) });
   if (ROUTE_DBG) { let f = p.fid, seg = [[p.x, p.z]]; const segs = []; p.path.forEach(w => { if (w.lift) { segs.push([f, seg]); f = w.lift; seg = []; } else if (Array.isArray(w)) seg.push(w); }); segs.push([f, seg]);
@@ -474,14 +478,16 @@ function actNow(p, ms) { if (FORCE[p.id]) { const f = FORCE[p.id], r = SCHED_TAB
 const CLAIM = {};
 function claim(ns, n, p) { const a = CLAIM[ns] = CLAIM[ns] || new Array(n).fill(null); let i = a.indexOf(p); if (i >= 0) return i; i = a.indexOf(null); if (i < 0) return -1; a[i] = p; return i; }
 function releaseExcept(p, keep) { Object.keys(CLAIM).forEach(ns => { if (ns === keep) return; const a = CLAIM[ns], i = a.indexOf(p); if (i >= 0) a[i] = null; }); }
-const AISLE_X = [-9, -6, -3], nearAisle = x => AISLE_X.reduce((q, w) => Math.abs(w - x) < Math.abs(q - x) ? w : q);
-function meetIn(c) { return c[2] ? [[c[0], 2.7]] : [[4.2, 2.7], [4.2, -3.7]]; } // 前排椅子從走道直接進；後排椅子繞桌子左側，不穿過桌子
-function meetExit(c) { return [[c[0], c[1] + (c[2] ? .6 : -.6)]].concat(meetIn(c).reverse()); }
+const AISLE_X = [-9, -6, -3], nearAisle = x => AISLE_X.reduce((q, w) => Math.abs(w - x) < Math.abs(q - x) ? w : q), AX = (p, x) => p.ax !== undefined ? p.ax : nearAisle(x); // 有專屬站位（6F 主播椅）的角色走自己的直行走道
+// 6F 會議桌在中間小會議廳（桌心 0,-3），後排椅子從桌子右側 x 2.6 繞進去
+const MCH6 = [[-1.2, -4.1, 0], [0, -4.1, 0], [1.2, -4.1, 0], [-1.2, -1.9, Math.PI], [0, -1.9, Math.PI], [1.2, -1.9, Math.PI]], MCH_OF = fid => fid === '6F' ? MCH6 : MCH;
+function meetIn(c, fid) { if (fid === '6F') return c[2] ? [[c[0], 2.7]] : [[2.6, 2.7], [2.6, -4.7]]; return c[2] ? [[c[0], 2.7]] : [[4.2, 2.7], [4.2, -3.7]]; } // 前排椅子從走道直接進；後排椅子繞桌子左側，不穿過桌子
+function meetExit(c, fid) { return [[c[0], c[1] + (c[2] ? .6 : -.6)]].concat(meetIn(c, fid).reverse()); }
 function admit(p, a, ms) { // 依名額決定這一刻能不能做；不能就改坐位子。回傳 [動作, 占用的名額 key]
   const b = bldOf(p), B = BLDG[b];
   if (a === 'meeting') { const fid = p.hf; if (!B.meetFloor(fid)) return ['desk_work'];
     const n = RES.filter(q => q.sched && bldOf(q) === b && q.hf === fid && actNow(q, ms) === 'meeting').length; if (n < 2) return ['desk_work']; // 本樓層不到 2 人就不開
-    const ns = 'm:' + b + ':' + fid, i = claim(ns, MCH.length, p); if (i < 0) return ['desk_work']; p.slotI = i; return ['meeting', ns]; }
+    const ns = 'm:' + b + ':' + fid, i = claim(ns, MCH_OF(fid).length, p); if (i < 0) return ['desk_work']; p.slotI = i; return ['meeting', ns]; }
   if (a === 'read5f') { if (!B.read || floorY[B.read] === undefined) return ['desk_work']; const ns = 'r:' + b, i = claim(ns, READ5.length, p); if (i < 0) return ['desk_work']; p.slotI = i; return ['read5f', ns]; }
   if (a === 'out') { if (!B.cars) return ['desk_work'];
     let c = p.car !== undefined ? CARS[p.car] : null; if (!(c && c.resv === p)) { p.car = undefined; const j = CARS.findIndex(q => q.on && q.state === 'parked' && !q.resv); if (j >= 0) { CARS[j].resv = p; p.car = j; c = CARS[j]; } }
@@ -492,7 +498,7 @@ function admit(p, a, ms) { // 依名額決定這一刻能不能做；不能就�
   return [a]; }
 function schedGoalOf(p, a, slot) { const u = k => hh(p.id + ':' + slot + ':' + k);
   if (a === 'desk_work') return deskGoal(p, 'sit');
-  if (a === 'meeting') { const c = MCH[p.slotI], head = p.fid === p.hf && !p.atMeet ? [[nearAisle(p.x), p.home[1] - backOf(p)], [nearAisle(p.x), 2.7]] : []; return { fid: p.hf, x: c[0], z: c[1], ry: c[2], act: 'msit', meet: 1, via: head.concat(meetIn(c)) }; }
+  if (a === 'meeting') { const c = MCH_OF(p.hf)[p.slotI], head = p.fid === p.hf && !p.atMeet ? [[AX(p, p.x), p.home[1] - backOf(p)], [AX(p, p.x), 2.7]] : []; return { fid: p.hf, x: c[0], z: c[1], ry: c[2], act: 'msit', meet: 1, via: head.concat(meetIn(c, p.hf)) }; }
   if (a === 'read5f') { const c = READ5[p.slotI]; return { fid: BLDG[bldOf(p)].read, x: c[0], z: c[1], ry: c[2], act: 'msit', via: [[c[0], c[1] + (c[2] ? 1 : -1)]] }; }
   if (a === 'out') { const c = CARS[p.car], cx = c.home[0] + .3, cz = c.home[1] - 1.2; return { fid: '1F', x: cx, z: cz, ry: Math.PI / 2, act: 'look', car: p.car, via: [[0, 8], [0, 11.3], [0, 12.2], [cx, 12.2]] }; }
   if (a === 'lobby_wait') { const w = LWAIT[p.slotI]; return { fid: '1F', x: w[0], z: w[1], ry: 0, act: 'look' }; }
@@ -772,6 +778,7 @@ function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(),
 import('./cube_sprite.js').then(m => m.initCubeSprites({ THREE, scene, floorY, T, deskPos, SHOT, Q, camera, controls, camPos, target, box }));
 import('./roof_park.js').then(m => m.initRoofPark({ THREE, scene, SHOT, Q, camera, controls, camPos, target }));
 import('./lightstrip.js').then(m => m.initLightStrip({ THREE, scene, floorY, SHOT, Q, camera, controls, camPos, target })).then(() => import('./contract_board.js').then(m => m.initContractBoard({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target }))).then(() => import('./quarterly_floor.js').then(m => m.initQuarterlyFloor({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target })));
+import('./floors67.js').then(m => m.initFloors67({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target })); // 預覽：6F 網紅間、7F 戰情室
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
 if (SHOT === 'close') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + .9, -2.6); camPos.set(-7.5, y + 3.4, 9.5); camera.position.copy(camPos); controls.target.copy(target); }
