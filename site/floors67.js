@@ -1,7 +1,7 @@
-// 預覽 floors-6-7 v0.5：加蓋 6F 網紅間、7F 戰情室（樓層內不放字樣）。純場景，不碰後端與心跳。
+// 預覽 floors-6-7 v0.6：加蓋 6F 網紅間、7F 戰情室（樓層內不放字樣）。純場景，不碰後端與心跳。
 // 6F：左右各一間直播間（左＝Mira、右＝Nova；環形補光燈、三腳架攝影機、商品小桌、商品層架、背景板），
 //     中間是小會議廳（本層會議桌 6 張椅子，作息表「開會」就坐這裡），電梯出來沿前方走道（z 2.7）可走到中間。
-// 7F：深色房間（v0.3）：正中央一張四人座桌、桌上 8 台電腦（上下雙排螢幕）；左右側牆各一排伺服器機櫃（v0.5，狀態燈閃爍）；
+// 7F：深色房間（v0.3）：正中央一張四人座桌、桌上 8 台電腦（上下雙排螢幕）；後牆一排伺服器機櫃（v0.6，面向室內，狀態燈閃爍）；
 //     地板、天花板各一組折角光條（四角→1/5 折 45°→收攏一人寬→打直到中心方形燈），顏色與呼吸跟外牆燈條同步，天花板較亮。
 //     螢幕只有抽象折線、長條、圓環、點陣，沒有任何數字或文字。目前沒人進駐，只留 4 張空椅子。
 // 座標與 index.html 一致：寬 30、深 20、樓高 4.68；電梯井在 x = ±14.25、z = 0。站位與會議椅座標在 index.html 的 STATION / MCH6。
@@ -113,13 +113,13 @@ export function initFloors67(ctx) {
     // 4 張空椅子（前側 2、後側 2；沒人進駐）
     [[-1.1, 1], [1.1, 1], [-1.1, -1], [1.1, -1]].forEach(([dx, f]) => { const cz = TZ + f * 1.5; add(B(.55, .1, .55), DK.chair, dx, .48, cz); add(B(.55, .66, .08), DK.chair, dx, .86, cz + f * .26); add(B(.5, .03, .5), DK.seat, dx, .54, cz); add(new THREE.CylinderGeometry(.04, .04, .4, 6), DK.frame, dx, .22, cz); add(new THREE.CylinderGeometry(.28, .28, .04, 5), DK.frame, dx, .03, cz); });
     // ---- v0.3 地板／天花板折角光條 ----
-    // v0.5：起點由四個角落往內收到 x＝±0.3×地板寬（左右兩邊起點相距約 3/5 地板），先沿前後方向往中間走約 1/5 地板深，
-    //       再以 45° 斜向中心，左右各兩條收攏到約一人寬（0.7）後打直通到中心方形燈。
+    // v0.6：改回 v0.4 原樣——四個角落（左右兩邊的邊邊）各一條，先沿左右方向往中間走約 1/5，再以 45° 斜向中心，
+    //       左右各兩條收攏到約一人寬（0.7）後打直通到中心方形燈。
     // 顏色與呼吸完全跟本層外牆燈條（LIGHT_STRIP_7F）同步：每幀從那組燈的材質抄顏色；天花板同圖案、亮一點（×1.3）。
-    const HX = 14.5, XS = .3 * 29.4, HZ = 9.2, S1 = 19.4 / 5, HW = .35, SW = .14; // 半寬、起點 x（±0.3×地板寬）、起點 z、第一段長（1/5 地板深）、一人寬的一半、燈條寬
+    const HX = 14.5, HZ = 9.2, S1 = 2.6, HW = .35, SW = .14; // 角落座標、第一段長、一人寬的一半、燈條寬
     const FLM = GLOW(0xA39A8E), FLF = GLOW(0xA39A8E, .35), CLM = GLOW(0xA39A8E), CLF = GLOW(0xA39A8E, .45);
     const HALO = new THREE.MeshBasicMaterial({ color: 0xA39A8E, toneMapped: false, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
-    const PATH = (sx, sz) => { const z1 = HZ - S1, x2 = XS - (z1 - HW); return [[sx * XS, sz * HZ], [sx * XS, sz * z1], [sx * x2, sz * HW], [sx * CS / 2, sz * HW]]; };
+    const PATH = (sx, sz) => { const x1 = HX - S1, x2 = x1 - (HZ - HW); return [[sx * HX, sz * HZ], [sx * x1, sz * HZ], [sx * x2, sz * HW], [sx * CS / 2, sz * HW]]; };
     const seg = (p, q, y, h, mat, halo) => { const dx = q[0] - p[0], dz = q[1] - p[1], len = Math.hypot(dx, dz), ry = Math.atan2(-dz, dx);
       const o = new THREE.Mesh(B(len + SW, h, SW), mat); o.position.set((p[0] + q[0]) / 2, y0 + y, (p[1] + q[1]) / 2); o.rotation.y = ry; o.raycast = () => {}; grp.add(o);
       if (halo) { const g = new THREE.Mesh(B(len + SW * 4, h * .5, SW * 5), HALO); g.position.copy(o.position); g.rotation.y = ry; g.renderOrder = 2; g.raycast = () => {}; grp.add(g); } };
@@ -135,8 +135,9 @@ export function initFloors67(ctx) {
         if (!src) { const g = scene.getObjectByName('LIGHT_STRIP_7F'); if (g && g.children.length > 1) src = { m: g.children[0].material, h: g.children[1].material }; else return; }
         FLM.color.copy(src.m.color); FLF.color.copy(src.m.color).multiplyScalar(.35); CLM.color.copy(src.m.color).multiplyScalar(1.3); CLF.color.copy(src.m.color).multiplyScalar(.45);
         HALO.color.copy(src.h.color); HALO.opacity = src.h.opacity * .7; })(); }
-    // ---- v0.5 伺服器機櫃：每側只留一排 ----
-    // 左右側牆各一排、面朝室內的機櫃，從後牆排到前窗，電梯口前後留空（不再有後方前後雙排）。全部用 instanced 畫，狀態燈照舊閃。
+    // ---- v0.6 伺服器機櫃：後牆一排 ----
+    // 只在後牆（桌子後方）排一排、正面朝室內的機櫃；不再有前後雙排、也不放側牆。全部用 instanced 畫，狀態燈照舊閃。
+    // 只放在後方兩條 45° 光條「後面」，角落第一段光條（|x| > 11.9）上方不放，不壓到光條。
     const RK = { body: L(0x2A3346), face: L(0x36425A), vent: L(0x0E131D) }, LED = [GLOW(0x4FE39A, .95), GLOW(0x2AD1C9, .95), GLOW(0xE9B44C, .95)], leds = [[], [], []];
     const PARTS = { body: [], face: [], vent: [], edge: [] };
     const rack = (cx, cz, r, H, k) => { const c = Math.cos(r), sn = Math.sin(r), W = (lx, lz) => [cx + lx * c + lz * sn, cz - lx * sn + lz * c];
@@ -145,8 +146,9 @@ export function initFloors67(ctx) {
       const nu = Math.floor((H - .35) / .22); for (let u = 0; u < nu; u++) { const uy = .32 + u * .22; put('vent', .5, .1, .02, -.06, uy, .525);
         for (let v = 0; v < 3; v++) { const p = W(.24 + (v - 1) * .055, .53); leds[(k * 3 + u + v * 2) % 3].push([p[0], uy, p[1], r]); } }
       RACKS++; };
-    let kk = 0;
-    [-1, 1].forEach(s => { for (let z = -8.3; z <= 8.7; z += .86) if (z < -1.3 || z > 2.6) rack(s * 14.2, z, -s * Math.PI / 2, 2.5, kk++); });
+    const RZ = -9.2, DIAG = a => -HW - (a - (HX - S1 - (HZ - HW))); let kk = 0; // 機櫃中心 z（背貼後牆）、後方斜光條在 |x|=a 的 z
+    const RX = []; for (let a = .43; DIAG(a + .45) > RZ + .5 + .3; a += .86) RX.push(a);
+    RX.forEach(a => [-1, 1].forEach(s => rack(s * a, RZ, 0, 2.7, kk++)));
     Object.entries(PARTS).forEach(([key, li]) => { const im = new THREE.InstancedMesh(B(1, 1, 1), key === 'edge' ? EDGE : RK[key], li.length);
       li.forEach((p, i) => { o3.position.set(p[3], y0 + p[4], p[5]); o3.rotation.set(0, p[6], 0); o3.scale.set(p[0], p[1], p[2]); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); });
       im.castShadow = key === 'body'; im.receiveShadow = true; im.raycast = () => {}; im.name = 'WAR_RACK_' + key; grp.add(im); });
