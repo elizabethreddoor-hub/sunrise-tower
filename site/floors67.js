@@ -3,7 +3,7 @@
 //     中間是小會議廳（本層會議桌 6 張椅子，作息表「開會」就坐這裡），電梯出來沿前方走道（z 2.7）可走到中間。
 // 7F：深色房間（v0.3）：正中央一張四人座桌、桌上 8 台電腦（上下雙排螢幕）；後牆一排伺服器機櫃（v0.6，面向室內，狀態燈閃爍）；
 //     地板、天花板各一組折角光條（四角→1/5 折 45°→收攏一人寬→打直到中心方形燈），顏色與呼吸跟外牆燈條同步，天花板較亮。
-//     螢幕只有抽象折線、長條、圓環、點陣，沒有任何數字或文字。目前沒人進駐，只留 4 張空椅子。
+//     螢幕只有抽象折線、長條、圓環、點陣，沒有任何數字或文字。v0.7：外匯小精靈進駐前左位（desk 1，座位表見 index.html STATION['7F']），其餘 3 張空椅子。
 // 座標與 index.html 一致：寬 30、深 20、樓高 4.68；電梯井在 x = ±14.25、z = 0。站位與會議椅座標在 index.html 的 STATION / MCH6。
 export function initFloors67(ctx) {
   const { THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target } = ctx, D = document;
@@ -110,7 +110,7 @@ export function initFloors67(ctx) {
       add(B(.07, 1.25, .07), DK.frame, x, 1.38, TZ); add(B(.4, .03, .26), DK.frame, x, .81, TZ);
       [0, 1].forEach(row => screen(.98, .55, x, 1.18 + row * .6, sz, ry, (xi + row * 2 + (f > 0 ? 0 : 1)) % 4));
       add(B(.62, .02, .2), DK.frame, x, .8, TZ + f * .62); add(B(.08, .02, .12), DK.chair, x + .45, .8, TZ + f * .62); }));
-    // 4 張空椅子（前側 2、後側 2；沒人進駐）
+    // 4 張椅子（前側 2、後側 2）；v0.7 起是正式座位（index.html STATION['7F'] desk 1–4），外匯小精靈坐 desk 1（前左）
     [[-1.1, 1], [1.1, 1], [-1.1, -1], [1.1, -1]].forEach(([dx, f]) => { const cz = TZ + f * 1.5; add(B(.55, .1, .55), DK.chair, dx, .48, cz); add(B(.55, .66, .08), DK.chair, dx, .86, cz + f * .26); add(B(.5, .03, .5), DK.seat, dx, .54, cz); add(new THREE.CylinderGeometry(.04, .04, .4, 6), DK.frame, dx, .22, cz); add(new THREE.CylinderGeometry(.28, .28, .04, 5), DK.frame, dx, .03, cz); });
     // ---- v0.3 地板／天花板折角光條 ----
     // v0.6：改回 v0.4 原樣——四個角落（左右兩邊的邊邊）各一條，先沿左右方向往中間走約 1/5，再以 45° 斜向中心，
@@ -170,5 +170,7 @@ export function initFloors67(ctx) {
   // 截圖用（只在 shot 參數下生效）：f7z＝站在 7F 前窗內側近看地板折角光條；f7c＝低機位往上看天花板光條。兩者臨時放寬視角。
   const wide = fov => { camera.fov = fov; camera.updateProjectionMatrix(); };
   if (SHOT === 'f7z' && floorY['7F'] !== undefined) { const y = floorY['7F'] + T; sync('7F'); wide(52); set(new THREE.Vector3(0, y + .2, -3.2), new THREE.Vector3(0, y + 4.3, 9.4)); }
+  // v0.7：f7fx＝近看中央四人座前左位（外匯小精靈的座位）
+  if (SHOT === 'f7fx' && floorY['7F'] !== undefined) { const y = floorY['7F'] + T; sync('7F'); set(new THREE.Vector3(-1.1, y + 1.1, .6), new THREE.Vector3(1.6, y + 2.7, 6.2)); }
   if (SHOT === 'f7c' && floorY['7F'] !== undefined) { const y = floorY['7F'] + T; sync('7F'); wide(62); set(new THREE.Vector3(0, y + 3.4, -5), new THREE.Vector3(0, y + .7, 9.4)); }
 }

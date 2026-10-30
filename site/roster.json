@@ -47,8 +47,8 @@
   },
   {
    "id": "fx",
-   "floor": 3,
-   "desk": 7,
+   "floor": 7,
+   "desk": 1,
    "form": "cube",
    "palette": "FX",
    "name": "外匯小精靈"

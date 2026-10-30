@@ -281,11 +281,14 @@ for (let i = 0; i < NP; i++) { const p = { fid: FL[i], sc: 1.15, ph: Math.random
 const o3 = new THREE.Object3D(), pv = new THREE.Object3D(); o3.add(pv);
 function place(im, i, p, lx, ly, swing, part) { o3.position.set(p.x, p.y, p.z); o3.rotation.set(0, p.ry, 0); o3.scale.setScalar(p.sc); const h = PART[part][0].parameters.height;
   pv.position.set(lx, ly + h, 0); pv.rotation.set(swing, 0, 0); pv.updateMatrix(); o3.updateMatrix(); const m = new THREE.Matrix4().makeTranslation(0, -h / 2, 0); im.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(o3.matrix, pv.matrix).multiply(m)); }
-const ROSTER_FALLBACK = {"residents": [{"id": "mira", "floor": 6, "desk": 1, "skin": "mira", "name": "Mira"}, {"id": "vera", "floor": 3, "desk": 2, "skin": "vera", "name": "Vera"}, {"id": "stylist", "floor": 3, "desk": 4, "skin": "stylist", "name": "造型師"}, {"id": "contract", "floor": 5, "desk": 4, "skin": "contract", "name": "合約管家"}, {"id": "engineer", "floor": 5, "desk": 7, "form": "cube", "palette": "ENG", "name": "軟體工程精靈"}, {"id": "fx", "floor": 3, "desk": 7, "form": "cube", "palette": "FX", "name": "外匯小精靈"}, {"id": "koc", "floor": 3, "desk": 6, "form": "cube", "palette": "KOC", "name": "KOC小精靈"}, {"id": "nova", "floor": 6, "desk": 2, "skin": "nova", "name": "Nova"}]};
+const ROSTER_FALLBACK = {"residents": [{"id": "mira", "floor": 6, "desk": 1, "skin": "mira", "name": "Mira"}, {"id": "vera", "floor": 3, "desk": 2, "skin": "vera", "name": "Vera"}, {"id": "stylist", "floor": 3, "desk": 4, "skin": "stylist", "name": "造型師"}, {"id": "contract", "floor": 5, "desk": 4, "skin": "contract", "name": "合約管家"}, {"id": "engineer", "floor": 5, "desk": 7, "form": "cube", "palette": "ENG", "name": "軟體工程精靈"}, {"id": "fx", "floor": 7, "desk": 1, "form": "cube", "palette": "FX", "name": "外匯小精靈"}, {"id": "koc", "floor": 3, "desk": 6, "form": "cube", "palette": "KOC", "name": "KOC小精靈"}, {"id": "nova", "floor": 6, "desk": 2, "skin": "nova", "name": "Nova"}]};
 const FLOOR_ID = { 1: '1F', 2: '2F', 3: '3F', 4: 'RF', 5: '5F', 6: '6F', 7: '7F' }, RES = [];
 // 預覽 floors-6-7：6F 網紅間不用 3×3 辦公桌，改用直播間主播椅當座位。desk 1 = 左間（Mira）、desk 2 = 右間（Nova）。
-// ax = 離開座位時走的直行走道（在商品桌外側，不穿過桌子、補光燈、三腳架）。7F 戰情室目前沒有座位分配（只放空椅子）。
-const STATION = { '6F': { 1: { x: -8.8, z: -4.4, ax: -10.6 }, 2: { x: 8.8, z: -4.4, ax: 10.6 } } };
+// ax = 離開座位時走的直行走道（在商品桌外側，不穿過桌子、補光燈、三腳架）。
+// v0.7：7F 戰情室正中央四人座也是正式座位。desk 1 = 前左、2 = 前右（靠電梯走道那側，面向 -z 看桌上螢幕，ry = π）、3 = 後左、4 = 後右（面向 +z）。
+//       ry = π 的座位「椅子後方」在 +z（bsg）；cz = 方塊精靈在這個座位的位置（椅子前緣上方，不壓到桌上螢幕）。外匯小精靈坐 desk 1。
+const STATION = { '6F': { 1: { x: -8.8, z: -4.4, ax: -10.6 }, 2: { x: 8.8, z: -4.4, ax: 10.6 } },
+  '7F': { 1: { x: -1.1, z: 1.5, ry: Math.PI, ax: -1.1, cz: 1.25 }, 2: { x: 1.1, z: 1.5, ry: Math.PI, ax: 1.1, cz: 1.25 }, 3: { x: -1.1, z: -1.5, ry: 0, ax: -2.9, cz: -1.25 }, 4: { x: 1.1, z: -1.5, ry: 0, ax: 2.9, cz: -1.25 } } };
 const SKIN_UV = { head: [0, 0, 8, 8, 8], hat: [32, 0, 8, 8, 8], body: [16, 16, 8, 12, 4], jacket: [16, 32, 8, 12, 4], rarm: [40, 16, 4, 12, 4], rsleeve: [40, 32, 4, 12, 4],
   larm: [32, 48, 4, 12, 4], lsleeve: [48, 48, 4, 12, 4], rleg: [0, 16, 4, 12, 4], rpants: [0, 32, 4, 12, 4], lleg: [16, 48, 4, 12, 4], lpants: [0, 48, 4, 12, 4] };
 function skinGeo(key, w, h, d, inf, px, oy) { const [u, v, W, H, D] = SKIN_UV[key], g = new THREE.BoxGeometry((w + inf * 2) * px, (h + inf * 2) * px, (d + inf * 2) * px);
@@ -306,19 +309,21 @@ function buildBlock(id, scale) { const M0 = skinMats(id); if (!M0) return null; 
   g.userData.rig = r; g.userData.M = M; g.userData.px = px; scene.add(g); return g; }
 const ROSTER_NM = {};
 function setRoster(r) { ((r && r.residents) || []).forEach(a => { if (a && a.id && a.name) ROSTER_NM[a.id] = String(a.name).slice(0, 12); }); const all = ((r && r.residents) || []).filter(a => a && (a.skin || a.id) && FLOOR_ID[a.floor] && floorY[FLOOR_ID[a.floor]] !== undefined);
-  window.P7_CUBE_ROSTER = all.filter(a => a.form === 'cube').map(a => Object.assign({}, a, { fid: FLOOR_ID[a.floor] })); 
+  window.P7_CUBE_ROSTER = all.filter(a => a.form === 'cube').map(a => { const fid = FLOOR_ID[a.floor], stn = STATION[fid] && STATION[fid][+a.desk]; return Object.assign({}, a, { fid }, stn ? { xz: [stn.x, stn.cz !== undefined ? stn.cz : stn.z], ry: stn.ry || 0, ax: stn.ax } : {}); }); 
   const list = all.filter(a => a.form !== 'cube').slice(0, RMAX);
   RES.forEach(p => { p.tag.remove(); if (p.bub) p.bub.remove(); if (p.sayEl) p.sayEl.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0;
   list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], stn = STATION[fid] && STATION[fid][+a.desk], d = stn ? [stn.x, stn.z + .8] : deskPos(+a.desk || 0), sc = +a.scale || 1;
-    const p = { res: true, id: String(a.id || a.skin || ''), bld: a.building || 'sunrise', want: null, dim: 0, fid, sc, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: 0, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0 };
-    if (stn) p.ax = stn.ax; p.g = buildBlock(a.skin || a.id, sc);
+    const p = { res: true, id: String(a.id || a.skin || ''), bld: a.building || 'sunrise', want: null, dim: 0, fid, sc, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: (stn && stn.ry) || 0, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0 };
+    if (stn) { p.ax = stn.ax; if (stn.ry) p.hry = stn.ry; } p.g = buildBlock(a.skin || a.id, sc);
     const tag = document.createElement('div'); tag.className = 'ntag'; box.appendChild(tag); p.tag = tag;
     const bub = document.createElement('div'); bub.className = 'bub'; box.appendChild(bub); p.bub = bub; RES.push(p); });
   RES.forEach(p => { p.bubT = ''; }); if (window.P7_cubeRoster) window.P7_cubeRoster(window.P7_CUBE_ROSTER); if (LAST_ST) applyStatus(LAST_ST); else schedAll(); }
 // v0.3：資料方塊精靈加入作息表，跟人一樣走動（漂浮移動，高度 1.25 m）；點擊名牌仍由 cube_sprite.js 處理
 window.P7_cubeRegister = list => { for (let i = RES.length - 1; i >= 0; i--) if (RES[i].cube) { RES[i].tag.remove(); RES.splice(i, 1); }
   list.forEach((s, j) => { const fid = s.fid, x = s.g.position.x, z = s.g.position.z; const tag = document.createElement('div'); tag.className = 'ntag'; box.appendChild(tag);
-    RES.push({ res: true, cube: s, id: s.id, bld: s.building || 'sunrise', want: null, dim: 0, fid, sc: 1, ph: j, home: [x, z], x, z, ry: 0, y: floorY[fid] + T, seat: 1, sitT: 30, to: null, pause: 0, g: s.g, tag }); });
+    const ra = (window.P7_CUBE_ROSTER || []).find(a => a.id === s.id) || {}, hry = ra.ry || 0; // v0.7：有專屬座位（7F）的方塊精靈帶上座位朝向與走道
+    const q = { res: true, cube: s, id: s.id, bld: s.building || 'sunrise', want: null, dim: 0, fid, sc: 1, ph: j, home: [x, z], x, z, ry: hry, y: floorY[fid] + T, seat: 1, sitT: 30, to: null, pause: 0, g: s.g, tag };
+    if (hry) q.hry = hry; if (ra.ax !== undefined) q.ax = ra.ax; RES.push(q); });
   applyStatus(LAST_ST || [], LAST_NM === null ? undefined : LAST_NM); };
 function poseBlock(p, m, t) { if (p.cube) { p.g.position.set(p.x, p.y + 1.25, p.z); p.g.rotation.y = p.ry; return; } const g = p.g, R = g.userData.rig, px = g.userData.px; let sw = 0; g.position.set(p.x, p.y, p.z); g.rotation.y = p.ry;
   ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => R[k].rotation.set(0, 0, 0));
@@ -337,6 +342,8 @@ let LAST_ST = null;
 let LAST_NM = null;
 const OFFICE_FIDS = ['2F', '3F', 'RF'], MT = [7, -2], AISLE = [-9, -6, -3];
 const MCH = [[5.6, -3.1, 0], [7, -3.1, 0], [8.4, -3.1, 0], [5.6, -.9, Math.PI], [7, -.9, Math.PI], [8.4, -.9, Math.PI]];
+// v0.7：7F 開會＝戰情室中央四人座（同一張桌、同 4 張椅子；本層 2 人以上才開，現在只有外匯小精靈一位 → 自動改坐位子）。站位繞桌子外圈。
+const MCH7 = [[1.1, 1.5, Math.PI], [-1.1, -1.5, 0], [1.1, -1.5, 0], [-1.1, 1.5, Math.PI]], MST7 = [[-3, 0, Math.PI / 2], [3, 0, -Math.PI / 2], [-3, 1.6, 2.3], [3, 1.6, -2.3], [-3, -1.6, .8], [3, -1.6, -.8]];
 const MST = [[4.25, -2, Math.PI / 2], [9.75, -2, -Math.PI / 2], [4.5, -3.9, .8], [9.5, -3.9, -.8], [4.5, -.1, 2.3], [9.5, -.1, -2.3], [7, -4.3, 0], [7, .3, Math.PI], [5.6, -4.4, .3], [8.4, -4.4, -.3]];
 const DOPEN = {};
 function doorOpen(fid, sd) { DOPEN[fid + sd] = 2.6; }
@@ -375,28 +382,28 @@ function lobbyChain(x, z) { // 從某點走到大廳走道的路徑點（最後�
 const ROUTE_DBG = Q.get('route') ? [] : null; window.P7_routes = ROUTE_DBG ? [] : null;
 const CZ = fid => fid === '5F' ? .3 : 2.7; // 各樓層的橫向走道（5F 書房長桌在 z 1.7–3.3，改走 z 0.3）
 const SPD = Math.min(20, Math.max(1, +(Q.get('spd') || 1))); // 除錯：spd=倍速（驗證路線用）
-const backOf = p => p.cube ? 1.4 : .6; // 座位後方的走道距離（人＝椅子後 0.6 m；方塊精靈的位置在桌子上方，退 1.4 m 到椅子後）
+const backOf = p => p.cube ? 1.4 : .6, bsg = p => p.hry ? 1 : -1; // 座位後方的走道距離（人＝椅子後 0.6 m；方塊精靈的位置在桌子上方，退 1.4 m 到椅子後）
 function plan(p) { const g = p.g2; p.pend = 0; p.path = [];
   if (p.fid === g.fid && Math.hypot(p.x - g.x, p.z - g.z) < .05) { p.act = g.act; p.ry = g.ry; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; } p.act = 'walk'; p.seat = 0;
   const exitM = p.atMeet && p.mc && p.fid === p.mcf; if (exitM) p.path.push(...meetExit(p.mc, p.mcf)); p.atMeet = g.meet ? 1 : 0; p.mc = g.meet ? [g.x, g.z, g.ry] : null; p.mcf = g.meet ? g.fid : null; // 從會議桌離開：先退回椅子後方→繞出桌子→走道
   const atHome = Math.hypot(p.x - p.home[0], p.z - p.home[1]) < .05 && p.fid === p.hf;
-  if (atHome) p.path.push([p.home[0], p.home[1] - backOf(p)]); // v0.4：起身往椅子後方退（不再穿過自己的桌子）
-  const dst = []; if (g.act === 'sit' || g.act === 'rest') dst.push([g.x, g.z - backOf(p)]); else if (g.act === 'msit') dst.push([g.x, g.z + (g.ry ? .6 : -.6)]); dst.push([g.x, g.z]);
+  if (atHome) p.path.push([p.home[0], p.home[1] + bsg(p) * backOf(p)]); // v0.4：起身往椅子後方退（不再穿過自己的桌子）
+  const dst = []; if (g.act === 'sit' || g.act === 'rest') dst.push([g.x, g.z + bsg(p) * backOf(p)]); else if (g.act === 'msit') dst.push([g.x, g.z + (g.ry ? .6 : -.6)]); dst.push([g.x, g.z]);
   if (g.fid !== p.fid) { const sd = p.x >= 0 ? 1 : -1, ex = sd * 13.4, sx = sd * ELEV_X;
     if (p.fid === '1F') p.path.push(...lobbyChain(p.x, p.z), [sd * 12, HALL_Z]);
-    else if (atHome) { const ax = AX(p, p.x), cz = CZ(p.fid); p.path.push([ax, p.home[1] - backOf(p)], [ax, cz], [ex, cz]); } // v0.4：離開座位先走桌間走道→樓層橫向走道→電梯口，不斜穿桌子
+    else if (atHome) { const ax = AX(p, p.x), cz = CZ(p.fid); p.path.push([ax, p.home[1] + bsg(p) * backOf(p)], [ax, cz], [ex, cz]); } // v0.4：離開座位先走桌間走道→樓層橫向走道→電梯口，不斜穿桌子
     else if (exitM) p.path.push([ex, CZ(p.fid)]);
     p.path.push([ex, .9], { door: p.fid, sd }, [sx, .9], [sx, 0], { lift: g.fid, sd }, [sx, .9], [ex, .9]);
-    if (g.fid === '1F') p.path.push([sd * 12, HALL_Z], ...lobbyChain(g.x, g.z).reverse()); else { const cz = CZ(g.fid); p.path.push([ex, cz]); if (g.via) g.via.forEach(v => p.path.push(v)); else if (/sit|rest/.test(g.act)) { const ax = AX(p, g.x); p.path.push([ax, cz], [ax, g.z - backOf(p)]); } } }
+    if (g.fid === '1F') p.path.push([sd * 12, HALL_Z], ...lobbyChain(g.x, g.z).reverse()); else { const cz = CZ(g.fid); p.path.push([ex, cz]); if (g.via) g.via.forEach(v => p.path.push(v)); else if (/sit|rest/.test(g.act)) { const ax = AX(p, g.x); p.path.push([ax, cz], [ax, g.z + bsg(p) * backOf(p)]); } } }
   else if (g.fid === '1F' && lobbyZone(p.x, p.z) === lobbyZone(g.x, g.z) && lobbyZone(g.x, g.z) !== 'hall') { /* 同一區（門外、咖啡吧、廁所）直接走 */ }
   else if (g.fid === '1F') { const a = lobbyChain(p.x, p.z), b = lobbyChain(g.x, g.z).reverse(); if (a.length > 1 || b.length > 1) p.path.push(...a, ...b); }
   else if (g.via) g.via.forEach(v => p.path.push(v));
-  else if (exitM && /sit|rest/.test(g.act)) { const ax = AX(p, g.x); p.path.push([ax, 2.7], [ax, g.z - backOf(p)]); } // 開完會回座位：沿走道再進座位排
+  else if (exitM && /sit|rest/.test(g.act)) { const ax = AX(p, g.x); p.path.push([ax, 2.7], [ax, g.z + bsg(p) * backOf(p)]); } // 開完會回座位：沿走道再進座位排
   p.path.push(...dst);
   if (ROUTE_DBG) window.P7_routes.push({ id: p.id, from: p.fid, to: g.fid, start: [p.x, p.z], path: p.path.map(w => Array.isArray(w) ? w.slice() : Object.assign({}, w)) });
   if (ROUTE_DBG) { let f = p.fid, seg = [[p.x, p.z]]; const segs = []; p.path.forEach(w => { if (w.lift) { segs.push([f, seg]); f = w.lift; seg = []; } else if (Array.isArray(w)) seg.push(w); }); segs.push([f, seg]);
     segs.forEach(([ff, sg]) => { if (sg.length < 2) return; const y = fH(ff) + T + .06, ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(sg.map(w => new THREE.Vector3(w[0], y, w[1]))), new THREE.LineBasicMaterial({ color: g.meet ? 0x00B050 : 0xFF2D55, depthTest: false })); ln.renderOrder = 999; scene.add(ln); ROUTE_DBG.push(ln); }); } }
-function deskGoal(p, act) { return { fid: p.hf, x: p.home[0], z: p.home[1], ry: 0, act }; }
+function deskGoal(p, act) { return { fid: p.hf, x: p.home[0], z: p.home[1], ry: p.hry || 0, act }; }
 function wanderGoal(p) { if (Math.random() < .3 && !p.cup) { p.mode = 'coffee'; return coffeeGoal(p); } const r = Math.random(), fid = r < .65 ? p.hf : r < .9 ? OFFICE_FIDS[Math.floor(Math.random() * 3)] : '1F';
   const A = fid === '1F' ? { x: [-10, 10], z: [2, 7] } : { x: [-12, 11], z: [3, 7.5] }; return { fid, x: rnd(A.x[0], A.x[1]), z: rnd(A.z[0], A.z[1]), ry: rnd(-3, 3), act: 'look' }; }
 function meetGoals(list) { // union-find over declared partners
@@ -407,7 +414,7 @@ function meetGoals(list) { // union-find over declared partners
   const USED = {}; const G = {}; Object.keys(par).forEach(a => { (G[f(a)] = G[f(a)] || []).push(a); }); const out = {};
   Object.values(G).forEach(ids => { ids.sort(); const ps = ids.map(i => P[i]); rinit(ps[0]); ps.forEach(rinit);
     const top = ps.reduce((a, b) => fH(b.hf) > fH(a.hf) ? b : a), fid = top.hf;
-    if (ids.length >= 3) { ids.forEach((id, i) => { const c = i < MCH.length ? MCH[i] : MST[(i - MCH.length) % MST.length]; out[id] = { fid, x: c[0], z: c[1], ry: c[2], act: i < MCH.length ? 'msit' : 'talk' }; }); return; }
+    if (ids.length >= 3) { ids.forEach((id, i) => { const MC = fid === '7F' ? MCH7 : MCH, MS = fid === '7F' ? MST7 : MST, c = i < MC.length ? MC[i] : MS[(i - MC.length) % MS.length]; out[id] = { fid, x: c[0], z: c[1], ry: c[2], act: i < MC.length ? 'msit' : 'talk' }; }); return; }
     if (ids.length === 1) { out[ids[0]] = deskGoal(P[ids[0]], 'sit'); return; }
     const [a, b] = ps; let x, z;
     if (a.hf === b.hf) { const mx = (a.home[0] + b.home[0]) / 2; x = AISLE.reduce((q, w) => Math.abs(w - mx) < Math.abs(q - mx) ? w : q); z = 2.7; }
@@ -480,8 +487,9 @@ function claim(ns, n, p) { const a = CLAIM[ns] = CLAIM[ns] || new Array(n).fill(
 function releaseExcept(p, keep) { Object.keys(CLAIM).forEach(ns => { if (ns === keep) return; const a = CLAIM[ns], i = a.indexOf(p); if (i >= 0) a[i] = null; }); }
 const AISLE_X = [-9, -6, -3], nearAisle = x => AISLE_X.reduce((q, w) => Math.abs(w - x) < Math.abs(q - x) ? w : q), AX = (p, x) => p.ax !== undefined ? p.ax : nearAisle(x); // 有專屬站位（6F 主播椅）的角色走自己的直行走道
 // 6F 會議桌在中間小會議廳（桌心 0,-3），後排椅子從桌子右側 x 2.6 繞進去
-const MCH6 = [[-1.2, -4.1, 0], [0, -4.1, 0], [1.2, -4.1, 0], [-1.2, -1.9, Math.PI], [0, -1.9, Math.PI], [1.2, -1.9, Math.PI]], MCH_OF = fid => fid === '6F' ? MCH6 : MCH;
-function meetIn(c, fid) { if (fid === '6F') return c[2] ? [[c[0], 2.7]] : [[2.6, 2.7], [2.6, -4.7]]; return c[2] ? [[c[0], 2.7]] : [[4.2, 2.7], [4.2, -3.7]]; } // 前排椅子從走道直接進；後排椅子繞桌子左側，不穿過桌子
+const MCH6 = [[-1.2, -4.1, 0], [0, -4.1, 0], [1.2, -4.1, 0], [-1.2, -1.9, Math.PI], [0, -1.9, Math.PI], [1.2, -1.9, Math.PI]], MCH_OF = fid => fid === '6F' ? MCH6 : fid === '7F' ? MCH7 : MCH;
+function meetIn(c, fid) { if (fid === '7F') { const sx = c[0] < 0 ? -2.9 : 2.9; return c[2] ? [[c[0], 2.7]] : [[sx, 2.7], [sx, -2.1]]; } // 7F：前排從走道直接進；後排從桌子同側繞過去
+  if (fid === '6F') return c[2] ? [[c[0], 2.7]] : [[2.6, 2.7], [2.6, -4.7]]; return c[2] ? [[c[0], 2.7]] : [[4.2, 2.7], [4.2, -3.7]]; } // 前排椅子從走道直接進；後排椅子繞桌子左側，不穿過桌子
 function meetExit(c, fid) { return [[c[0], c[1] + (c[2] ? .6 : -.6)]].concat(meetIn(c, fid).reverse()); }
 function admit(p, a, ms) { // 依名額決定這一刻能不能做；不能就改坐位子。回傳 [動作, 占用的名額 key]
   const b = bldOf(p), B = BLDG[b];
@@ -498,7 +506,7 @@ function admit(p, a, ms) { // 依名額決定這一刻能不能做；不能就�
   return [a]; }
 function schedGoalOf(p, a, slot) { const u = k => hh(p.id + ':' + slot + ':' + k);
   if (a === 'desk_work') return deskGoal(p, 'sit');
-  if (a === 'meeting') { const c = MCH_OF(p.hf)[p.slotI], head = p.fid === p.hf && !p.atMeet ? [[AX(p, p.x), p.home[1] - backOf(p)], [AX(p, p.x), 2.7]] : []; return { fid: p.hf, x: c[0], z: c[1], ry: c[2], act: 'msit', meet: 1, via: head.concat(meetIn(c, p.hf)) }; }
+  if (a === 'meeting') { const c = MCH_OF(p.hf)[p.slotI], head = p.fid === p.hf && !p.atMeet ? [[AX(p, p.x), p.home[1] + bsg(p) * backOf(p)], [AX(p, p.x), 2.7]] : []; return { fid: p.hf, x: c[0], z: c[1], ry: c[2], act: 'msit', meet: 1, via: head.concat(meetIn(c, p.hf)) }; }
   if (a === 'read5f') { const c = READ5[p.slotI]; return { fid: BLDG[bldOf(p)].read, x: c[0], z: c[1], ry: c[2], act: 'msit', via: [[c[0], c[1] + (c[2] ? 1 : -1)]] }; }
   if (a === 'out') { const c = CARS[p.car], cx = c.home[0] + .3, cz = c.home[1] - 1.2; return { fid: '1F', x: cx, z: cz, ry: Math.PI / 2, act: 'look', car: p.car, via: [[0, 8], [0, 11.3], [0, 12.2], [cx, 12.2]] }; }
   if (a === 'lobby_wait') { const w = LWAIT[p.slotI]; return { fid: '1F', x: w[0], z: w[1], ry: 0, act: 'look' }; }
