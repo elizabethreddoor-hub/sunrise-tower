@@ -8,7 +8,7 @@
 //       木長椅 2 張、一排暖金色低亮度小燈柱、中間一片空草坪、Mira 圓形小草坪舞台。
 // 配色只用：暖灰石板 #A39A8E、淺木、玉綠 #4FA37A（樹冠另用同色系深一階）、金邊 #C9A24E。不用紅色、不用 #8C040C。
 // 只有燈具會發光（燈柱燈頭、涼亭吊燈）；其餘一律不自發光的 Lambert 材質。不加點光源，避免搶各層呼吸燈條的焦點。
-// 屋頂上沒有任何文字、LOGO、招牌或數字。隔壁紅九九Lite 不動。這版不做角色上屋頂散步。
+// 屋頂上沒有任何文字、LOGO、招牌或數字。隔壁紅九九Lite 不動。v0.5（預覽）：作息表「屋頂散步」——角色從右側電梯亭上來，在 Mira 小廣場附近散步或坐長椅（只是演出）。
 export function initRoofPark(ctx) {
   const { THREE, scene, SHOT, Q, camera, controls, camPos, target } = ctx;
   const STONE = 0xA39A8E, WOOD = 0xD9B98C, WOOD2 = 0xC4A274, JADE = 0x4FA37A, JADE2 = 0x3E8A64, GOLD = 0xC9A24E, STONE2 = 0x8E8679;
@@ -89,7 +89,7 @@ export function initRoofPark(ctx) {
     tree(-HW + 1.6, -HD + 1.5, 1.05); tree(HW - 1.6, -HD + 1.5, 1.0);
     bed(0, -HD + 1.1, 5.0, .9);
     bench(6.6, -1.9);
-    let MIRA_BENCH, MIRA_STAGE, lampSkip;
+    let MIRA_BENCH, MIRA_STAGE, lampSkip, ROUTE = [], SPOTS = [], MIRA_SPOT = null;
     {
       // A＝L 形折線（造型師）：對齊 1 m 方格。入口平台往前（+z）直走 3 m，在右前角轉 90 度，沿前緣內側往左直達左前角小廣場。
       const LZ0 = PFz1 + 2, LZ1 = LZ0 + 2;                 // 橫向段 z 範圍（2 格寬）
@@ -106,6 +106,18 @@ export function initRoofPark(ctx) {
       MIRA_STAGE = { x: bx, z: (bz + PLz1) / 2 + .35, r: 1.2 }; // 長椅前方的圓形小舞台
       bench(-6.6, -1.9);                                     // 原左長椅保留為一般座位
       lampSkip = x => x < PLx1 + .3;                         // 小廣場範圍內不放燈柱
+      // v0.5 作息演出「屋頂散步」：給 index.html 用的走路路線與停留點（全部由這裡的座標算，不寫死，大樓加蓋重建時一起更新）。
+      //   route＝電梯亭內 → 出門 → 平台 → 沿 L 形步道中線 → 進小廣場右後角；spots＝長椅右格（坐）＋舞台四周 4 個散步點（站著看）。
+      //   每個點的 via＝從 route 終點走到該點的轉折（繞開圓形舞台）；離開時倒著走回去。Mira 固定坐自己的長椅左格（MIRA_BENCH）。
+      const WZ = (LZ0 + LZ1) / 2, E0 = [PLx1 - .6, PLz0 + 1.3], SZ = (bz + PLz1) / 2 + .35;
+      ROUTE = [[EX, EZ], [EX, WZ], [PLx1 - .6, WZ], E0];
+      SPOTS = [
+        { x: bx + .65, z: bz, ry: 0, act: 'bsit', via: [] },
+        { x: bx + 2.3, z: SZ, ry: -Math.PI / 2, act: 'look', via: [[bx + 2.3, E0[1]]] },
+        { x: bx - 2.3, z: SZ, ry: Math.PI / 2, act: 'look', via: [[bx, E0[1]], [bx - 2.3, E0[1]]] },
+        { x: bx + 1.4, z: PLz1 - .35, ry: Math.PI - .4, act: 'look', via: [[bx + 2.3, E0[1]], [bx + 2.3, PLz1 - .35]] },
+        { x: bx - 1.4, z: PLz1 - .35, ry: Math.PI + .4, act: 'look', via: [[bx, E0[1]], [bx - 2.3, E0[1]], [bx - 2.3, PLz1 - .35]] }];
+      MIRA_SPOT = { x: bx - .65, z: bz, ry: 0, act: 'bsit', via: [[bx - .65, E0[1]]] };
     }
     // ★ Mira 活動區：圓形小草坪舞台（MIRA_STAGE）：石基座＋玉綠草面＋金邊，無文字無標誌。
     cyl(MIRA_STAGE.r, MIRA_STAGE.r + .05, .2, MAT.stone, MIRA_STAGE.x, gy + .2, MIRA_STAGE.z, 40);
@@ -116,7 +128,7 @@ export function initRoofPark(ctx) {
     for (let i = 0; i < LN; i++) { const x = -A + 1.2 + i * (2 * A - 2.4) / (LN - 1); if (lampSkip(x)) continue;
       box(.06, .8, .06, MAT.gold, x, gy + .1 + .4, LZ, false); box(.16, .04, .16, MAT.gold, x, gy + .1 + .82, LZ, false); box(.11, .12, .11, LAMP, x, gy + .1 + .9, LZ, false); }
     g.userData = { MIRA_BENCH, MIRA_STAGE, y: gy + .1, path: 'A' };
-    window.P7_roofPark = { y: gy + .1, path: 'A', miraBench: MIRA_BENCH, miraStage: MIRA_STAGE, pavilion: { x: PX, z: PZ }, elevator };
+    window.P7_roofPark = { y: gy + .1, path: 'A', miraBench: MIRA_BENCH, miraStage: MIRA_STAGE, pavilion: { x: PX, z: PZ }, elevator, route: ROUTE, spots: SPOTS, miraSpot: MIRA_SPOT };
     // 截圖用：roofpark＝右前上方近看整個屋頂
     // 截圖用：roofpathclose＝從左前方近看電梯亭、入口平台和步道接口
     if (SHOT === 'roofpathclose' && camera && !cam) { cam = true; controls.minDistance = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.maxDistance = 200; controls.minPolarAngle = .2;
@@ -124,6 +136,9 @@ export function initRoofPark(ctx) {
     // 截圖用：roofpath＝退遠一點、看得到整片屋頂＋右側電梯亭
     if (SHOT === 'roofpath' && camera && !cam) { cam = true; controls.minDistance = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.maxDistance = 200; controls.minPolarAngle = .2;
       target.set(0, y0, 1.5); camPos.set(9, y0 + 27, 39); camera.position.copy(camPos); controls.target.copy(target); }
+    // 截圖用：roofplaza＝近看左前角 Mira 小廣場（作息演出「屋頂散步」）
+    if (SHOT === 'roofplaza' && camera && !cam && MIRA_STAGE) { cam = true; controls.minDistance = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.maxDistance = 200; controls.minPolarAngle = .2;
+      target.set(MIRA_STAGE.x + 1.5, y0 + .7, MIRA_STAGE.z - 1.2); camPos.set(MIRA_STAGE.x + 9, y0 + 6.5, MIRA_STAGE.z + 9.5); camera.position.copy(camPos); controls.target.copy(target); }
     if (SHOT === 'roofpark' && camera && !cam) { cam = true; controls.minDistance = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.maxDistance = 200; controls.minPolarAngle = .2;
       target.set(-1, y0 + .6, 0); camPos.set(13, y0 + 14, 27); camera.position.copy(camPos); controls.target.copy(target); }
   }

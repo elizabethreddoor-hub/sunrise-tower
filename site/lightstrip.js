@@ -1,4 +1,4 @@
-// 外牆發光條 v0.5：每一層樓都裝同款發光條（1F、2F、3F、4F、5F 各一圈），沿該層上緣樓板線四面環繞，上緣金邊。所有人看到同一組燈，燈上無文字。
+// 外牆發光條 v0.5：每一層樓都裝同款發光條（1F～7F 各一圈；預覽 floors-6-7 加上 6F、7F，6F 延後 1.5 秒、7F 延後 1.8 秒），沿該層上緣樓板線四面環繞，上緣金邊。所有人看到同一組燈，燈上無文字。
 // 顏色全部由看板同一份狀態資料驅動（事件 p7-board-state）；拿不到資料時維持待確認暖灰。換色 0.8 秒漸變，所有樓層同時換。
 // 呼吸：週期 6.4 秒（3.2 秒漸亮＋3.2 秒漸暗，cosine 曲線，亮度 0.05→1.6）。由下往上每層延後 0.3 秒：1F 0 秒、2F 0.3 秒、3F 0.6 秒…
 // 相位差做法：每一幀都用同一個時鐘算 (t − 層序×300ms) mod 6400，不累加、不各自計時，所以不會累積誤差。只作用在本棟，隔壁紅九九Lite 不受影響。
@@ -7,7 +7,7 @@ export function initLightStrip(ctx) {
   const COL = { PENDING: '#A39A8E', YELLOW: '#E3B04B', GREEN: '#4FA37A', RED: '#E53935' };
   const W = 30, D = 20, FH = 4.68, FH1 = 7.02, SH = .06, SD = .03, GAP = .02, PER = 6400, LAG = 300, FADE = 800;
   const LO = .05, HI = 1.6; // v0.5：最亮 1.6 倍（原 1.0），光暈也加強
-  const ORDER = ['1F', '2F', '3F', 'RF', '5F'].filter(f => floorY[f] !== undefined); // RF 即畫面上的 4F
+  const ORDER = ['1F', '2F', '3F', 'RF', '5F', '6F', '7F'].filter(f => floorY[f] !== undefined); // RF 即畫面上的 4F
   const gold = new THREE.MeshBasicMaterial({ color: 0xC9A24E, toneMapped: false });
   const grp = new THREE.Group(); grp.name = 'LIGHT_STRIP_ALL'; scene.add(grp);
   const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
