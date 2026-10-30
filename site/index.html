@@ -287,7 +287,8 @@ const FLOOR_ID = { 1: '1F', 2: '2F', 3: '3F', 4: 'RF', 5: '5F', 6: '6F', 7: '7F'
 // ax = 離開座位時走的直行走道（在商品桌外側，不穿過桌子、補光燈、三腳架）。
 // v0.7：7F 戰情室正中央四人座也是正式座位。desk 1 = 前左、2 = 前右（靠電梯走道那側，面向 -z 看桌上螢幕，ry = π）、3 = 後左、4 = 後右（面向 +z）。
 //       ry = π 的座位「椅子後方」在 +z（bsg）；cz = 方塊精靈在這個座位的位置（椅子前緣上方，不壓到桌上螢幕）。外匯小精靈坐 desk 1。
-const STATION = { '6F': { 1: { x: -8.8, z: -4.4, ax: -10.6 }, 2: { x: 8.8, z: -4.4, ax: 10.6 } },
+// v0.8：live＝這個座位附帶的直播站位（站在商品桌後方、面向攝影機與補光燈；只有登記 live 的座位才會排「直播」）。
+const STATION = { '6F': { 1: { x: -8.8, z: -4.4, ax: -10.6, live: { x: -8.8, z: -3.97, ry: 0 } }, 2: { x: 8.8, z: -4.4, ax: 10.6, live: { x: 8.8, z: -3.97, ry: 0 } } },
   '7F': { 1: { x: -1.1, z: 1.5, ry: Math.PI, ax: -1.1, cz: 1.25 }, 2: { x: 1.1, z: 1.5, ry: Math.PI, ax: 1.1, cz: 1.25 }, 3: { x: -1.1, z: -1.5, ry: 0, ax: -2.9, cz: -1.25 }, 4: { x: 1.1, z: -1.5, ry: 0, ax: 2.9, cz: -1.25 } } };
 const SKIN_UV = { head: [0, 0, 8, 8, 8], hat: [32, 0, 8, 8, 8], body: [16, 16, 8, 12, 4], jacket: [16, 32, 8, 12, 4], rarm: [40, 16, 4, 12, 4], rsleeve: [40, 32, 4, 12, 4],
   larm: [32, 48, 4, 12, 4], lsleeve: [48, 48, 4, 12, 4], rleg: [0, 16, 4, 12, 4], rpants: [0, 32, 4, 12, 4], lleg: [16, 48, 4, 12, 4], lpants: [0, 48, 4, 12, 4] };
@@ -314,7 +315,7 @@ function setRoster(r) { ((r && r.residents) || []).forEach(a => { if (a && a.id 
   RES.forEach(p => { p.tag.remove(); if (p.bub) p.bub.remove(); if (p.sayEl) p.sayEl.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0;
   list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], stn = STATION[fid] && STATION[fid][+a.desk], d = stn ? [stn.x, stn.z + .8] : deskPos(+a.desk || 0), sc = +a.scale || 1;
     const p = { res: true, id: String(a.id || a.skin || ''), bld: a.building || 'sunrise', want: null, dim: 0, fid, sc, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: (stn && stn.ry) || 0, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0 };
-    if (stn) { p.ax = stn.ax; if (stn.ry) p.hry = stn.ry; } p.g = buildBlock(a.skin || a.id, sc);
+    p.desk = +a.desk || 0; if (stn) { p.ax = stn.ax; if (stn.ry) p.hry = stn.ry; } p.g = buildBlock(a.skin || a.id, sc);
     const tag = document.createElement('div'); tag.className = 'ntag'; box.appendChild(tag); p.tag = tag;
     const bub = document.createElement('div'); bub.className = 'bub'; box.appendChild(bub); p.bub = bub; RES.push(p); });
   RES.forEach(p => { p.bubT = ''; }); if (window.P7_cubeRoster) window.P7_cubeRoster(window.P7_CUBE_ROSTER); if (LAST_ST) applyStatus(LAST_ST); else schedAll(); }
@@ -327,6 +328,9 @@ window.P7_cubeRegister = list => { for (let i = RES.length - 1; i >= 0; i--) if 
   applyStatus(LAST_ST || [], LAST_NM === null ? undefined : LAST_NM); };
 function poseBlock(p, m, t) { if (p.cube) { p.g.position.set(p.x, p.y + 1.25, p.z); p.g.rotation.y = p.ry; return; } const g = p.g, R = g.userData.rig, px = g.userData.px; let sw = 0; g.position.set(p.x, p.y, p.z); g.rotation.y = p.ry;
   ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => R[k].rotation.set(0, 0, 0));
+  if (m === 'live') { const k = Math.sin(t * 2.6 + p.ph), q = Math.sin(t * 1.3 + p.ph); g.position.y = p.y + Math.abs(Math.sin(t * 2.6 + p.ph)) * .025; // v0.8 直播：面向鏡頭，右手揮動介紹、左手拿商品、頭輕點、身體微晃
+    R.armR.rotation.x = -1.25 + k * .35; R.armR.rotation.z = .25 + Math.max(0, k) * .3; R.armL.rotation.x = -.95; R.armL.rotation.z = -.12; R.head.rotation.x = Math.sin(t * 2.6 + p.ph + 1) * .08; R.head.rotation.y = q * .18; R.torso.rotation.y = q * .06; return; }
+  if (m === 'bsit') m = 'rest';
   if (m === 'sit' || m === 'rest' || m === 'msit') { const ty = m === 'sit' ? Math.sin(t * 9 + p.ph) * .12 : 0; g.position.y = p.y + .5 - 12 * px; R.legL.rotation.x = R.legR.rotation.x = -1.5;
     if (m === 'rest') { R.armL.rotation.x = R.armR.rotation.x = -.35 + Math.sin(t * 1.3 + p.ph) * .04; R.head.rotation.y = Math.sin(t * .4 + p.ph) * .3; }
     else if (m === 'msit') { R.armL.rotation.x = -.7; R.armR.rotation.x = -.7 + Math.max(0, Math.sin(t * 2.2 + p.ph)) * -.6; R.head.rotation.x = Math.sin(t * 1.1 + p.ph) * .08; }
@@ -365,7 +369,7 @@ function cupSet(p, on) { if (!p.g || p.cube) { p.cup = !!on; return; } if (on &&
 function coffeeGoal(p) { const q = Math.floor(Math.random() * 3); return { fid: '1F', x: ICAFE.q[q][0], z: ICAFE.q[q][1], ry: Math.PI, act: 'look', cafe: 1 }; }
 function busy(p) { return p.path.length > 0 || p.mode === 'wander' || p.mode === 'coffee' || (p.hold || 0) > 0; }
 function rinit(p) { if (p.hf) return; p.hf = p.fid; p.mode = 'desk'; p.path = []; p.dim = 0; }
-const fH = f => floorY[f];
+const fH = f => f === 'PK' ? (window.P7_roofPark ? window.P7_roofPark.y - T : undefined) : floorY[f]; // v0.8：'PK'＝屋頂公園（不是樓層，只給作息演出用）
 function goal(p, g) { // g = {fid,x,z,ry,act:'sit'|'rest'|'msit'|'talk'|'look'}
   const k = g.fid + ':' + g.x.toFixed(2) + ':' + g.z.toFixed(2) + ':' + g.act; if (p.gk === k && !g.force) { p.queued = null; return; } if (!SHOT && busy(p) && !g.force) { p.queued = g; return; } p.gk = k; p.g2 = g;
   if (SHOT) { p.fid = g.fid; p.y = fH(g.fid) + T; p.x = g.x; p.z = g.z; p.ry = g.ry; p.act = g.act; p.path = []; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; }
@@ -386,10 +390,18 @@ const backOf = p => p.cube ? 1.4 : .6, bsg = p => p.hry ? 1 : -1; // 座位後�
 function plan(p) { const g = p.g2; p.pend = 0; p.path = [];
   if (p.fid === g.fid && Math.hypot(p.x - g.x, p.z - g.z) < .05) { p.act = g.act; p.ry = g.ry; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; } p.act = 'walk'; p.seat = 0;
   const exitM = p.atMeet && p.mc && p.fid === p.mcf; if (exitM) p.path.push(...meetExit(p.mc, p.mcf)); p.atMeet = g.meet ? 1 : 0; p.mc = g.meet ? [g.x, g.z, g.ry] : null; p.mcf = g.meet ? g.fid : null; // 從會議桌離開：先退回椅子後方→繞出桌子→走道
+  const sp = p.spot && p.spot.fid === p.fid ? p.spot : null; p.spot = g.spot || null; // v0.8：離開演出站位（直播、沙發、屋頂）先照原路退出
+  const homeSeat = g.fid === p.hf && /^(sit|rest)$/.test(g.act) && Math.hypot(g.x - p.home[0], g.z - p.home[1]) < .05;
+  if (sp) { p.path.push(...sp.out); if (sp.exit && !(sp.room && homeSeat && g.fid === p.fid)) p.path.push(sp.exit); }
   const atHome = Math.hypot(p.x - p.home[0], p.z - p.home[1]) < .05 && p.fid === p.hf;
   if (atHome) p.path.push([p.home[0], p.home[1] + bsg(p) * backOf(p)]); // v0.4：起身往椅子後方退（不再穿過自己的桌子）
-  const dst = []; if (g.act === 'sit' || g.act === 'rest') dst.push([g.x, g.z + bsg(p) * backOf(p)]); else if (g.act === 'msit') dst.push([g.x, g.z + (g.ry ? .6 : -.6)]); dst.push([g.x, g.z]);
-  if (g.fid !== p.fid) { const sd = p.x >= 0 ? 1 : -1, ex = sd * 13.4, sx = sd * ELEV_X;
+  const dst = []; if (g.act === 'sit' || g.act === 'rest') dst.push([g.x, g.z + bsg(p) * backOf(p)]); else if (g.act === 'msit') dst.push([g.x, g.z + (g.ry ? .6 : -.6)]); else if (g.act === 'bsit') dst.push([g.x + Math.sin(g.ry) * .6, g.z + Math.cos(g.ry) * .6]); dst.push([g.x, g.z]);
+  if (g.fid !== p.fid && (g.fid === 'PK' || p.fid === 'PK')) { const ex = 13.4, sx = ELEV_X; // v0.8：屋頂公園只有右側電梯亭（route[0]＝亭內）
+    const R = window.P7_roofPark, k0 = R && R.route[0] ? R.route[0] : [sx, 0];
+    if (p.fid === 'PK') { p.path.push(k0, [sx, 0], { lift: g.fid, sd: 1 }, [sx, .9], [ex, .9]); if (g.fid === '1F') p.path.push([12, HALL_Z], ...lobbyChain(g.x, g.z).reverse()); else { const cz = CZ(g.fid); p.path.push([ex, cz]); if (g.via) g.via.forEach(v => p.path.push(v)); else if (/sit|rest/.test(g.act)) { const ax = AX(p, g.x); p.path.push([ax, cz], [ax, g.z + bsg(p) * backOf(p)]); } } }
+    else { if (p.fid === '1F') p.path.push(...lobbyChain(p.x, p.z), [12, HALL_Z]); else if (atHome) { const ax = AX(p, p.x), cz = CZ(p.fid); p.path.push([ax, p.home[1] + bsg(p) * backOf(p)], [ax, cz], [ex, cz]); } else p.path.push([ex, CZ(p.fid)]);
+      p.path.push([ex, .9], { door: p.fid, sd: 1 }, [sx, .9], [sx, 0], { lift: 'PK', sd: 1 }); if (g.via) g.via.forEach(v => p.path.push(v)); } }
+  else if (g.fid !== p.fid) { const sd = p.x >= 0 ? 1 : -1, ex = sd * 13.4, sx = sd * ELEV_X;
     if (p.fid === '1F') p.path.push(...lobbyChain(p.x, p.z), [sd * 12, HALL_Z]);
     else if (atHome) { const ax = AX(p, p.x), cz = CZ(p.fid); p.path.push([ax, p.home[1] + bsg(p) * backOf(p)], [ax, cz], [ex, cz]); } // v0.4：離開座位先走桌間走道→樓層橫向走道→電梯口，不斜穿桌子
     else if (exitM) p.path.push([ex, CZ(p.fid)]);
@@ -398,7 +410,8 @@ function plan(p) { const g = p.g2; p.pend = 0; p.path = [];
   else if (g.fid === '1F' && lobbyZone(p.x, p.z) === lobbyZone(g.x, g.z) && lobbyZone(g.x, g.z) !== 'hall') { /* 同一區（門外、咖啡吧、廁所）直接走 */ }
   else if (g.fid === '1F') { const a = lobbyChain(p.x, p.z), b = lobbyChain(g.x, g.z).reverse(); if (a.length > 1 || b.length > 1) p.path.push(...a, ...b); }
   else if (g.via) g.via.forEach(v => p.path.push(v));
-  else if (exitM && /sit|rest/.test(g.act)) { const ax = AX(p, g.x); p.path.push([ax, 2.7], [ax, g.z + bsg(p) * backOf(p)]); } // 開完會回座位：沿走道再進座位排
+  else if (exitM && /sit|rest/.test(g.act)) { const ax = AX(p, g.x); p.path.push([ax, 2.7], [ax, g.z + bsg(p) * backOf(p)]); }
+  else if (p.ax !== undefined && homeSeat && g.fid !== '1F' && !atHome) { const lp = p.path.filter(Array.isArray).pop() || [p.x, p.z]; if (Math.abs(lp[0] - p.ax) > .1) p.path.push([p.ax, CZ(g.fid)]); p.path.push([p.ax, g.z + bsg(p) * backOf(p)]); } // v0.8：有專屬站位的人回座位一律走自己的直行走道 // 開完會回座位：沿走道再進座位排
   p.path.push(...dst);
   if (ROUTE_DBG) window.P7_routes.push({ id: p.id, from: p.fid, to: g.fid, start: [p.x, p.z], path: p.path.map(w => Array.isArray(w) ? w.slice() : Object.assign({}, w)) });
   if (ROUTE_DBG) { let f = p.fid, seg = [[p.x, p.z]]; const segs = []; p.path.forEach(w => { if (w.lift) { segs.push([f, seg]); f = w.lift; seg = []; } else if (Array.isArray(w)) seg.push(w); }); segs.push([f, seg]);
@@ -452,15 +465,19 @@ const SCHED_TABLE = [
   { name: '坐位子', weight: 1, where: 'seat', dur: [10, 25] },
   { name: '開會', weight: 1, where: 'meeting_table', dur: [10, 25] },
   { name: '看書', weight: 1, where: 'reading_spot', dur: [10, 25] },
-  { name: '外出', weight: 1, where: 'door_out', dur: [10, 25] }
+  { name: '外出', weight: 1, where: 'door_out', dur: [10, 25] },
+  { name: '屋頂散步', weight: 1, where: 'roof_park', dur: [10, 25] },
+  { name: '直播', weight: 1, where: 'live_room', dur: [10, 25] },
+  { name: '大廳小坐', weight: 1, where: 'floor_lounge', dur: [10, 25] }
 ];
+// v0.8：每個角色只在「做得到的動作」之間均分（例如沒有直播站位的人不排直播、本層沒有休息區的人不排大廳小坐），新增一列一樣自動重新均分。
 window.P7_SCHED_TABLE = SCHED_TABLE;
-const WHERE = { seat: 'desk_work', meeting_table: 'meeting', reading_spot: 'read5f', door_out: 'out', coffee: 'coffee', toilet: 'toilet', wander: 'wander' };
-const ACT_NM = { desk_work: '坐位子', meeting: '開會', read5f: '看書', out: '外出', lobby_wait: '外出（大廳等車）', coffee: '咖啡', toilet: '廁所', wander: '走走' };
+const WHERE = { seat: 'desk_work', meeting_table: 'meeting', reading_spot: 'read5f', door_out: 'out', roof_park: 'roof', live_room: 'live', floor_lounge: 'lounge', coffee: 'coffee', toilet: 'toilet', wander: 'wander' };
+const ACT_NM = { desk_work: '坐位子', meeting: '開會', read5f: '看書', out: '外出', lobby_wait: '外出（大廳等車）', roof: '屋頂散步', live: '直播', lounge: '大廳小坐', coffee: '咖啡', toilet: '廁所', wander: '走走' };
 // 每棟大樓各自運作：會議桌在哪些樓層、看書區、門口車位。新角色只要在名冊登記 building/floor/desk 就自動加入（沒寫 building = 日上昇大樓）。
 const BLDG = {
-  sunrise: { name: '日上昇大樓', meetFloor: fid => fid !== '1F' && fid !== '5F' && floorY[fid] !== undefined, read: '5F', cars: true },
-  hong99lite: { name: '紅九九Lite', meetFloor: () => false, read: null, cars: false } // 建置中：還沒有樓層，角色加入前先留設定
+  sunrise: { name: '日上昇大樓', meetFloor: fid => fid !== '1F' && fid !== '5F' && floorY[fid] !== undefined, read: '5F', cars: true, roof: () => window.P7_roofPark },
+  hong99lite: { name: '紅九九Lite', meetFloor: () => false, read: null, cars: false, roof: () => null } // 建置中：還沒有樓層，角色加入前先留設定
 };
 const bldOf = p => BLDG[p.bld] ? p.bld : 'sunrise';
 const TOI = { door: [-12, -9.8], via: [[-12, -8.4], [-12, -10.7]], stand: [-13.1, -11.3] };
@@ -471,8 +488,8 @@ const FORCE = {}; (Q.get('act') || '').split(',').forEach(x => { const [a, b] = 
 const TL = new Map(), DAYMS = 86400000, TZ8 = 8 * 3600000;
 const rowsSig = () => SCHED_TABLE.map(r => r.name + '/' + r.weight + '/' + r.where + '/' + r.dur).join('|');
 function segAt(p, ms) { // 這個角色在 ms 這一刻的作息段：{ t 開始時間, row 動作列, i 段編號 }
-  const day = Math.floor((ms + TZ8) / DAYMS), d0 = day * DAYMS - TZ8, key = p.id + '|' + day + '|' + rowsSig(); let L = TL.get(key);
-  if (!L) { if (TL.size > 600) TL.clear(); L = []; const rows = SCHED_TABLE.filter(r => +r.weight > 0), tot = rows.reduce((a, r) => a + +r.weight, 0);
+  const day = Math.floor((ms + TZ8) / DAYMS), d0 = day * DAYMS - TZ8, can = SCHED_TABLE.map(r => canDo(p, WHERE[r.where]) ? 1 : 0).join(''), key = p.id + '|' + day + '|' + rowsSig() + '|' + can; let L = TL.get(key);
+  if (!L) { if (TL.size > 600) TL.clear(); L = []; const rows = SCHED_TABLE.filter((r, k) => +r.weight > 0 && can[k] === '1'), tot = rows.reduce((a, r) => a + +r.weight, 0);
     let t = d0 - hh(p.id + ':stagger') * 30 * 60000, i = 0; // 起點依 id 錯開 0–30 分鐘
     while (t < d0 + DAYMS) { let row = rows[rows.length - 1] || { name: '坐位子', where: 'seat', dur: [10, 25] }, u = hh(p.id + ':' + day + ':' + i) * tot;
       for (const r of rows) { if ((u -= +r.weight) < 0) { row = r; break; } }
@@ -483,7 +500,17 @@ function segAt(p, ms) { // 這個角色在 ms 這一刻的作息段：{ t 開始
 function actNow(p, ms) { if (FORCE[p.id]) { const f = FORCE[p.id], r = SCHED_TABLE.find(x => x.name === f || x.where === f); return r ? WHERE[r.where] || 'desk_work' : f; } return WHERE[segAt(p, ms).row.where] || 'desk_work'; }
 // 名額（會議椅 6、看書位 6、大廳等車位 6）：誰先占到誰坐，坐著的人不會被擠走；換動作就讓出來。
 const CLAIM = {};
-function claim(ns, n, p) { const a = CLAIM[ns] = CLAIM[ns] || new Array(n).fill(null); let i = a.indexOf(p); if (i >= 0) return i; i = a.indexOf(null); if (i < 0) return -1; a[i] = p; return i; }
+// v0.8 作息演出：屋頂散步／直播／大廳小坐。全部只是演出，不代表真實狀態（名牌才是）。
+// 休息區（大廳小坐）：每層樓可登記幾個座位 { x, z, ry, via：從本層前方走道進來的轉折 }；6F 是中間會議廳兩張小沙發（面向中間）。
+const LOUNGE = { '6F': [[-1, 3.1, -6.75], [1, 3.1, -6.75], [-1, 2.2, -8.1], [1, 2.2, -8.1]].map(([s, vx, z]) => ({ x: s * 3.7, z, ry: 0, via: [[s * vx, 2.7], [s * vx, z]] })) };
+LOUNGE['6F'].forEach(c => { c.ry = c.x < 0 ? Math.PI / 2 : -Math.PI / 2; });
+const liveOf = p => { const s = STATION[p.hf]; return s && p.desk !== undefined && s[p.desk] && s[p.desk].live; };
+function canDo(p, a) { const B = BLDG[bldOf(p)]; rinit(p);
+  if (a === 'roof') { const R = B.roof && B.roof(); return !!(R && R.route && R.route.length && R.spots && R.spots.length); }
+  if (a === 'live') return !!liveOf(p) && !p.cube;
+  if (a === 'lounge') return !!(LOUNGE[p.hf] && LOUNGE[p.hf].length);
+  return true; }
+function claim(ns, n, p, near) { const a = CLAIM[ns] = CLAIM[ns] || new Array(n).fill(null); let i = a.indexOf(p); if (i >= 0) return i; i = a.indexOf(null); if (i >= 0 && near) a.forEach((q, k) => { if (!q && near(k) < near(i)) i = k; }); if (i < 0) return -1; a[i] = p; return i; } // near(k)：可選，挑離自己最近的空位（v0.8 大廳小坐用）
 function releaseExcept(p, keep) { Object.keys(CLAIM).forEach(ns => { if (ns === keep) return; const a = CLAIM[ns], i = a.indexOf(p); if (i >= 0) a[i] = null; }); }
 const AISLE_X = [-9, -6, -3], nearAisle = x => AISLE_X.reduce((q, w) => Math.abs(w - x) < Math.abs(q - x) ? w : q), AX = (p, x) => p.ax !== undefined ? p.ax : nearAisle(x); // 有專屬站位（6F 主播椅）的角色走自己的直行走道
 // 6F 會議桌在中間小會議廳（桌心 0,-3），後排椅子從桌子右側 x 2.6 繞進去
@@ -501,6 +528,10 @@ function admit(p, a, ms) { // 依名額決定這一刻能不能做；不能就�
     let c = p.car !== undefined ? CARS[p.car] : null; if (!(c && c.resv === p)) { p.car = undefined; const j = CARS.findIndex(q => q.on && q.state === 'parked' && !q.resv); if (j >= 0) { CARS[j].resv = p; p.car = j; c = CARS[j]; } }
     if (c) return ['out'];
     const ns = 'w:' + b, i = claim(ns, LWAIT.length, p); if (i < 0) return ['desk_work']; p.slotI = i; return ['lobby_wait', ns]; } // 車都出去了：在大廳門口等，有車回來就出發
+  if (a === 'roof') { if (!canDo(p, 'roof')) return ['desk_work']; const R = B.roof(); if (p.id === 'mira' && R.miraSpot) { p.slotI = -1; return ['roof']; }
+    const ns = 'pk:' + b, i = claim(ns, R.spots.length, p); if (i < 0) return ['desk_work']; p.slotI = i; return ['roof', ns]; }
+  if (a === 'live') return canDo(p, 'live') ? ['live'] : ['desk_work'];
+  if (a === 'lounge') { if (!canDo(p, 'lounge')) return ['desk_work']; const ns = 'l:' + b + ':' + p.hf, L = LOUNGE[p.hf], i = claim(ns, L.length, p, k => Math.hypot(L[k].x - p.home[0], L[k].z - p.home[1])); if (i < 0) return ['desk_work']; p.slotI = i; return ['lounge', ns]; }
   if (a === 'coffee') { const ns = 'c:' + b, i = claim(ns, ICAFE.q.length, p); if (i < 0) return ['desk_work']; p.slotI = i; return ['coffee', ns]; }
   if (a === 'toilet') { const i = claim('t:' + b, 1, p); return i < 0 ? ['desk_work'] : ['toilet', 't:' + b]; }
   return [a]; }
@@ -509,6 +540,12 @@ function schedGoalOf(p, a, slot) { const u = k => hh(p.id + ':' + slot + ':' + k
   if (a === 'meeting') { const c = MCH_OF(p.hf)[p.slotI], head = p.fid === p.hf && !p.atMeet ? [[AX(p, p.x), p.home[1] + bsg(p) * backOf(p)], [AX(p, p.x), 2.7]] : []; return { fid: p.hf, x: c[0], z: c[1], ry: c[2], act: 'msit', meet: 1, via: head.concat(meetIn(c, p.hf)) }; }
   if (a === 'read5f') { const c = READ5[p.slotI]; return { fid: BLDG[bldOf(p)].read, x: c[0], z: c[1], ry: c[2], act: 'msit', via: [[c[0], c[1] + (c[2] ? 1 : -1)]] }; }
   if (a === 'out') { const c = CARS[p.car], cx = c.home[0] + .3, cz = c.home[1] - 1.2; return { fid: '1F', x: cx, z: cz, ry: Math.PI / 2, act: 'look', car: p.car, via: [[0, 8], [0, 11.3], [0, 12.2], [cx, 12.2]] }; }
+  if (a === 'roof') { const R = BLDG[bldOf(p)].roof(), s = p.slotI < 0 ? R.miraSpot : R.spots[p.slotI], way = R.route.concat(s.via);
+    return { fid: 'PK', x: s.x, z: s.z, ry: s.ry, act: s.act, via: way, spot: { fid: 'PK', out: way.slice().reverse() } }; }
+  if (a === 'live') { const L = liveOf(p), ax = AX(p, p.x), atH = p.fid === p.hf && Math.hypot(p.x - p.home[0], p.z - p.home[1]) < .05;
+    return { fid: p.hf, x: L.x, z: L.z, ry: L.ry, act: 'live', via: (p.fid === p.hf && !atH ? [[ax, CZ(p.hf)]] : []).concat([[ax, atH ? p.home[1] + bsg(p) * backOf(p) : CZ(p.hf)], [ax, L.z]]), spot: { fid: p.hf, out: [[ax, L.z]], exit: [ax, CZ(p.hf)], room: 1 } }; }
+  if (a === 'lounge') { const c = LOUNGE[p.hf][p.slotI], ax = AX(p, p.x), atH = p.fid === p.hf && Math.hypot(p.x - p.home[0], p.z - p.home[1]) < .05, head = atH ? [[ax, p.home[1] + bsg(p) * backOf(p)], [ax, CZ(p.hf)]] : [];
+    return { fid: p.hf, x: c.x, z: c.z, ry: c.ry, act: 'bsit', via: head.concat(c.via), spot: { fid: p.hf, out: c.via.slice(1).reverse(), exit: c.via[0] } }; }
   if (a === 'lobby_wait') { const w = LWAIT[p.slotI]; return { fid: '1F', x: w[0], z: w[1], ry: 0, act: 'look' }; }
   if (a === 'coffee') { const q = ICAFE.q[p.slotI]; return { fid: '1F', x: q[0], z: q[1], ry: Math.PI, act: 'look', cafe: 1 }; }
   if (a === 'toilet') return { fid: '1F', x: TOI.stand[0], z: TOI.stand[1], ry: -Math.PI / 2, act: 'look', via: TOI.via.slice() };
@@ -676,7 +713,8 @@ function people(dt, t) { PEOPLE.concat(RES).forEach((p, i) => { let sw = 0;
   Object.values(IM).forEach(im => { im.instanceMatrix.needsUpdate = true; }); }
 const tv3 = new THREE.Vector3(); let LYSYNC = null;
 function focusFid() { let best = null, by = -1e9; Object.keys(floorY).forEach(f => { const y = floorY[f]; if (y <= controls.target.y + .3 && y > by) { by = y; best = f; } }); return best; }
-function tags() { if (LYSYNC) LYSYNC(); const ff = focusFid(); RES.forEach(p => { tv3.set(p.x, p.y + (p.seat ? .5 + 1.3 * p.sc : 2.05 * p.sc), p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
+// v0.8：鏡頭看屋頂時（'PK'）只顯示屋頂上角色的名牌
+function tags() { if (LYSYNC) LYSYNC(); const RP = window.P7_roofPark, ff = RP && controls.target.y >= RP.y - .6 ? 'PK' : focusFid(); RES.forEach(p => { tv3.set(p.x, p.y + (p.seat ? .5 + 1.3 * p.sc : 2.05 * p.sc), p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
   const show = !!p.tag.textContent && dist < 45 && p.fid === ff && !(p.g && !p.g.visible) && !p.away && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? 'block' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; }
   p.tag.style.opacity = p.dim > .5 ? .55 : 1;
   if (p.sayT && !p.sayEl) { p.sayEl = document.createElement('div'); p.sayEl.className = 'say'; box.appendChild(p.sayEl); }
