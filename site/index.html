@@ -17,7 +17,7 @@ body.nogl #hint{display:none}
 .ntag small{display:block;font-size:10px;color:#5A6B7D;text-align:center;line-height:1.2}
 #schedCap{position:absolute;left:10px;bottom:12px;z-index:5;color:#d8cfc4;font-size:11px;background:rgba(20,18,20,.6);padding:3px 10px;border-radius:10px;pointer-events:none}body.team #schedCap,body.nogl #schedCap{display:none}@media (max-width:640px){#schedCap{bottom:42px}}
 </style></head><body>
-<div id="three"></div><div id="fbar" role="group" aria-label="樓層"><button data-f="7F" title="戰情室">7F</button><button data-f="6F" title="網紅間">6F</button><button data-f="5F" title="季報書房">5F</button><button data-f="RF">4F</button><button data-f="3F">3F</button><button data-f="2F">2F</button><button data-f="1F">1F</button><button data-f="all" class="on">全景</button></div><button id="tvk" title="團隊" aria-label="團隊觀看">🔑</button><div id="hint">拖曳可微轉、滾輪縮放；點大樓看公司服務資訊</div><div id="schedCap">人物動作為作息演出，實際狀態見名牌</div>
+<div id="three"></div><div id="fbar" role="group" aria-label="樓層"><button data-f="8F" title="總經理室">8F</button><button data-f="7F" title="戰情室">7F</button><button data-f="6F" title="網紅間">6F</button><button data-f="5F" title="季報書房">5F</button><button data-f="RF">4F</button><button data-f="3F">3F</button><button data-f="2F">2F</button><button data-f="1F">1F</button><button data-f="all" class="on">全景</button></div><button id="tvk" title="團隊" aria-label="團隊觀看">🔑</button><div id="hint">拖曳可微轉、滾輪縮放；點大樓看公司服務資訊</div><div id="schedCap">人物動作為作息演出，實際狀態見名牌</div>
 <div id="info" role="dialog"><h2>公司服務資訊<button id="ix" aria-label="關閉">×</button></h2><div class="b">
 <span class="ex">範例文字・待填入</span>
 <p>【範例】這裡放公司簡介，一到兩句話說明我們是誰、做什麼。</p>
@@ -74,9 +74,11 @@ const FM = {
   '2F': { wall: nm('F2_wall', 0x1F2326), floor: nm('F2_floor', 0x2B3034), main: nm('F2_main', 0x2A8C9E), accent: nm('F2_accent', 0x3FAE6A), trim: nm('F2_trim', 0xB48C4C, GOLD), light: nm('F2_light', 0x2A8C9E) },
   '1F': { wall: nm('F1_wall', 0xEEF2F6), floor: nm('F1_floor', 0xE9EDF2), trim: nm('F1_trim', 0xF08A24), main: nm('F1_main', 0x2F6FB3), accent: nm('F1_accent', 0x547A5C), light: nm('F1_light', 0xFFFFFF, LAMP(0xFFFFFF)) } 
 };
-FM['5F'] = FM['1F']; FM['6F'] = FM['1F']; FM['7F'] = FM['1F']; // 預覽 floors-6-7：加蓋 6F 網紅間、7F 戰情室（外殼同款，內裝在 floors67.js）
+FM['5F'] = FM['1F']; FM['6F'] = FM['1F']; FM['7F'] = FM['1F']; FM['8F'] = FM['1F']; // 預覽 ceo-office：8F 總經理室（內裝在 ceo8f.js）
+ // 預覽 floors-6-7：加蓋 6F 網紅間、7F 戰情室（外殼同款，內裝在 floors67.js）
 Object.keys(FM).forEach(k => FM[k] = FM['1F']);
 const STYLE = {
+  '8F': { light: 0xFFE2B0, lk: .7, fill: 0x5C3B24, fillK: .2, label: '8F' },
   '7F': { light: 0x6FA8FF, lk: .6, fill: 0x1F4E85, fillK: .2, label: '7F' }, '6F': { light: 0xFFF1E6, fill: 0xE7A9B5, fillK: .2, label: '6F' },
   '5F': { light: 0xFFD9A8, fill: 0xC9894A, fillK: .25, label: '5F' },
   RF: { light: 0xF4F8FF, fill: 0xC8503C, fillK: .25, label: '4F' }, '3F': { light: 0xF4F8FF, fill: 0xB0444C, fillK: .2, label: '3F' },
@@ -196,7 +198,7 @@ function build(floors) {
     [-1, 1].forEach(s => { mesh(B(.04, FH - T, D - .3), GLASS, s * (W / 2 - .05), y + T + (FH - T) / 2, 0, world, false); for (let k = -2; k <= 2; k++) mesh(B(.04, FH - .2, .04), SH.main, s * (W / 2 - .02), y + FH / 2, k * (D / 4.4), world, false); });
     if (0) mesh(B(.04, FH - T - .6, 3.2), RED3, -(W / 2 - .25), y + T + (FH - T - .6) / 2, -3.6, world, false); 
     if (fid === 'RF' || fid === '1F') mesh(B(W - .5, .1, .03), m.trim, 0, y + T + .05, BZ + .02, world, false);   
-    const g = new THREE.Group(); g.name = 'F' + st.label.replace('F', '') + '_furniture'; world.add(g); furnGroups[f.floor_id] = g; if (!f.locked) { if (fid === '1F') lobby1F(y + T, g, m); else if (fid !== '5F' && fid !== '6F' && fid !== '7F') OFFICE_FLOORS.push(y + T); buildExtras(f.floor_id, y + T, g, m); mergeStatic(g); } else mesh(B(W - .3, FH - T - .04, D - .3), FROST, 0, y + T + (FH - T) / 2, 0, world, false); 
+    const g = new THREE.Group(); g.name = 'F' + st.label.replace('F', '') + '_furniture'; world.add(g); furnGroups[f.floor_id] = g; if (!f.locked) { if (fid === '1F') lobby1F(y + T, g, m); else if (fid !== '5F' && fid !== '6F' && fid !== '7F' && fid !== '8F') OFFICE_FLOORS.push(y + T); buildExtras(f.floor_id, y + T, g, m); mergeStatic(g); } else mesh(B(W - .3, FH - T - .04, D - .3), FROST, 0, y + T + (FH - T) / 2, 0, world, false); 
     
     { const lite = matchMedia('(pointer: coarse)').matches || innerWidth < 760; 
       const WL = [[-(W / 2 - 2.2), 0], [W / 2 - 2.2, 0], [0, BZ + 2.2], [0, D / 2 - 2.2]].filter((p, j) => !lite || j < 2);
@@ -257,7 +259,7 @@ function camHome(H) { towerH = H; const a = innerWidth / Math.max(1, innerHeight
   const dist = Math.max((H + 6) / 2 / tv, (hw + 2) / th) + D1 / 2; setCam(new THREE.Vector3(cx0, (H + 4) / 2, 0), dist, true, a < 1); }
 function setCam(t, dist, now, straight) { from.p.copy(camera.position); from.t.copy(controls.target); target.copy(t); camPos.set(straight ? 0 : t.x + dist * .12, t.y + dist * .05, t.z + dist); tweenT = now ? 1 : 0; if (now) { camera.position.copy(camPos); controls.target.copy(target); } }
 controls.maxDistance = 260; camera.far = 1600; controls.maxPolarAngle = 1.55; camera.updateProjectionMatrix();
-build([{ floor_id: '7F' }, { floor_id: '6F' }, { floor_id: '5F' }, { floor_id: 'RF' }, { floor_id: '3F' }, { floor_id: '2F' }, { floor_id: '1F' }]);
+build([{ floor_id: '8F' }, { floor_id: '7F' }, { floor_id: '6F' }, { floor_id: '5F' }, { floor_id: 'RF' }, { floor_id: '3F' }, { floor_id: '2F' }, { floor_id: '1F' }]);
 { const OM = { desk: mat(0xFFFFFF), edge: mat(0xF08A24), chair: DS(mat(0xF08A24)), screen: mat(0x5A6B7D), pot: DS(mat(0xF4F6F9)), leaf: DS(mat(0x5E9E6A)), table: mat(0xF4F6F9) };
   const U = (parts) => mergeGeometries(parts.map(q => { const gg = q[0].index ? q[0].toNonIndexed() : q[0].clone(); gg.deleteAttribute('uv'); gg.deleteAttribute('normal'); gg.translate(q[1], q[2], q[3]); gg.computeVertexNormals(); return gg; }));
   const deskG = U([[B(1.6, .76, .8), 0, .38, 0]]), edgeG = B(1.6, .04, .02), chairG = U([[new THREE.PlaneGeometry(.5, .5).rotateX(-Math.PI / 2), 0, .5, 0], [new THREE.PlaneGeometry(.5, .5), 0, .75, .25]]), scrG = B(.6, .36, .04);
@@ -825,6 +827,7 @@ import('./cube_sprite.js').then(m => m.initCubeSprites({ THREE, scene, floorY, T
 import('./roof_park.js').then(m => m.initRoofPark({ THREE, scene, SHOT, Q, camera, controls, camPos, target }));
 import('./lightstrip.js').then(m => m.initLightStrip({ THREE, scene, floorY, SHOT, Q, camera, controls, camPos, target })).then(() => import('./contract_board.js').then(m => m.initContractBoard({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target }))).then(() => import('./quarterly_floor.js').then(m => m.initQuarterlyFloor({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target })));
 import('./floors67.js').then(m => m.initFloors67({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target })); // 預覽：6F 網紅間、7F 戰情室
+import('./ceo8f.js').then(m => m.initCeo8F({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target })); // 預覽 ceo-office：8F 總經理室（公開＝霧面玻璃，團隊觀看＝內裝）
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
 if (SHOT === 'close') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + .9, -2.6); camPos.set(-7.5, y + 3.4, 9.5); camera.position.copy(camPos); controls.target.copy(target); }
