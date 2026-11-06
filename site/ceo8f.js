@@ -1,9 +1,9 @@
-// 預覽 ceo-office v0.1：加蓋 8F 總經理室（只是場景預覽，不碰後端、不動任何現有角色）。
+// 預覽 ceo-office v0.2：加蓋 8F 總經理室（只是場景預覽，不碰後端、不動任何現有角色）。
 // 風格：深色木紋＋金邊（參考高階主管樓層），與大樓其他樓層同一套金色 #C9A24E。
 // 版面（寬 30、深 20；後方三間房 z -9.7..-0.9，前方是電梯走道與大廳，電梯井在 x = ±14.25、z = 0 保持淨空）：
 //   左：總經理辦公室（大辦公桌、高背主位椅＝空位，不新增角色；整面書櫃、側面整面落地窗、小沙發、地毯）
 //   中：高層會議室（橢圓會議桌 6 席＋後牆大螢幕，螢幕只有抽象圖形，沒有數字或文字）
-//   右：三間玻璃小辦公室：COO Mira、CTO Nova、CFO（待定空位）；只放椅子當預留座位，角色仍在原樓層。
+//   右：三間玻璃小辦公室（名牌一律「籌備中」，不寫職稱／名字）；只放椅子當預留座位，角色仍在原樓層。左總經理室門牌也寫「籌備中」；中會議室維持「高層會議室」。
 // 公開／團隊兩種樣子：一般訪客看到整層霧面玻璃＋一扇關著的木門（看不到裡面、沒有人）；團隊觀看（🔑）才看得到內裝。
 //   截圖：?shot=f8&mock=live&team=1 看內裝，?shot=f8&mock=live 看公開霧面版。
 export function initCeo8F(ctx) {
@@ -37,10 +37,17 @@ export function initCeo8F(ctx) {
     add(B(x1 - x0, .1, .12), MT.gold, (x0 + x1) / 2, 3.32, ZF); [x0, x1].forEach(x => add(B(.08, 3.3, .1), MT.gold, x, 1.65, ZF));
     if (doorAt != null) [doorAt - doorW / 2, doorAt + doorW / 2].forEach(x => add(B(.08, 3.3, .1), MT.gold, x, 1.65, ZF)); };
   glassWall(-14.6, -5.4, -6.6, 1.3); glassWall(-5.4, 5.4, 0, 1.6);
-  // 小名牌（金底深字，掛在玻璃門楣上）；只寫職稱與名字
-  const plate = (txt, x, z, w, grp) => { const cv = D.createElement('canvas'); cv.width = 512; cv.height = 96; const g = cv.getContext('2d'); g.fillStyle = '#2A1A10'; g.fillRect(0, 0, 512, 96); g.strokeStyle = '#C9A24E'; g.lineWidth = 6; g.strokeRect(4, 4, 504, 88);
-    g.fillStyle = '#E9C77B'; g.font = 'bold 50px "Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 256, 52);
-    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const s = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 96 / 512), new THREE.MeshBasicMaterial({ map: tx, toneMapped: false, color: 0xDDDDDD })); s.position.set(x, y0 + 2.95, z); s.raycast = () => {}; (grp || INT).add(s); return s; };
+  // 小名牌（深底金字，掛在玻璃門楣上）；字放大加粗，截圖也看得清楚
+  const plate = (txt, x, z, w, grp) => {
+    const W = 1024, H = 256; const cv = D.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+    g.fillStyle = '#1A1008'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#C9A24E'; g.lineWidth = 14; g.strokeRect(10, 10, W - 20, H - 20);
+    g.strokeStyle = '#E9C77B'; g.lineWidth = 3; g.strokeRect(22, 22, W - 44, H - 44);
+    g.fillStyle = '#F2D48A'; g.font = '900 118px "Noto Sans CJK TC","Noto Sans TC","Noto Serif CJK TC",sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, W / 2, H / 2 + 4);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 8;
+    const s = new THREE.Mesh(new THREE.PlaneGeometry(w, w * H / W), new THREE.MeshBasicMaterial({ map: tx, toneMapped: false }));
+    s.position.set(x, y0 + 3.05, z); s.raycast = () => {}; (grp || INT).add(s); return s; };
 
   // ===================== 左：總經理辦公室 =====================
   { const cx = -10, cz = -5.4;
@@ -70,7 +77,7 @@ export function initCeo8F(ctx) {
     add(new THREE.CylinderGeometry(.015, .015, 1.0, 4), MT.gold, cx, 3.95, dz + .3); add(new THREE.CylinderGeometry(.5, .5, .06, 20), WARM, cx, 3.42, dz + .3).castShadow = false;
     const pl = new THREE.PointLight(0xFFDDB0, 6, 11, 1.4); pl.position.set(cx, y0 + 3.2, cz); INT.add(pl);
     const bl = new THREE.PointLight(0xFFE2B8, 5, 7, 1.4); bl.position.set(cx, y0 + 2.6, -7.6); INT.add(bl); // 書櫃補光
-    plate('總經理室', -10, ZF + .04, 1.5);
+    plate('籌備中', -10, ZF + .04, 2.4);
   }
 
   // ===================== 中：高層會議室 =====================
@@ -99,11 +106,11 @@ export function initCeo8F(ctx) {
     [-1, 1].forEach(s => add(new THREE.CylinderGeometry(.012, .012, .9, 4), MT.gold, s * 1.4, 4.0, tz)); add(B(3.2, .06, .14), WARM, 0, 3.55, tz).castShadow = false; add(B(3.3, .03, .2), MT.gold, 0, 3.6, tz);
     const pl = new THREE.PointLight(0xFFE6BE, 6, 10, 1.4); pl.position.set(0, y0 + 3.2, tz); INT.add(pl);
     [[-4.7, -9.0], [4.7, -9.0]].forEach(p => { add(new THREE.CylinderGeometry(.25, .2, .5, 10), MT.pot, p[0], .25, p[1]); add(new THREE.IcosahedronGeometry(.5, 0), MT.plant, p[0], 1.0, p[1]); });
-    plate('高層會議室', 0, ZF + .04, 1.7);
+    plate('高層會議室', 0, ZF + .04, 2.6);
   }
 
   // ===================== 右：三間玻璃小辦公室 =====================
-  { const XS = [5.4, 8.47, 11.53, 14.6], ROOMS = [['COO · Mira', MT.rose], ['CTO · Nova', MT.blue], ['CFO · 待定', MT.amber]];
+  { const XS = [5.4, 8.47, 11.53, 14.6], ROOMS = [['籌備中', MT.rose], ['籌備中', MT.blue], ['籌備中', MT.amber]];
     // 房間之間的玻璃隔間（金框）
     [XS[1], XS[2]].forEach(x => { add(B(.04, 3.3, ZF - ZB), GL, x, 1.65, ZC).renderOrder = 2; add(B(.08, .1, ZF - ZB), MT.gold, x, 3.32, ZC); add(B(.08, .05, ZF - ZB), MT.gold, x, .03, ZC); });
     ROOMS.forEach(([name, acc], i) => { const x0 = XS[i], x1 = XS[i + 1], cx = (x0 + x1) / 2, w = x1 - x0;
@@ -118,7 +125,7 @@ export function initCeo8F(ctx) {
       add(new THREE.CylinderGeometry(.18, .15, .4, 10), MT.pot, x1 - .45, .2, -1.4); add(new THREE.IcosahedronGeometry(.35, 0), MT.plant, x1 - .45, .75, -1.4);
       const pl = new THREE.PointLight(0xFFE6BE, 3, 6, 1.4); pl.position.set(cx, y0 + 3.2, -4.8); INT.add(pl);
       add(B(.9, .04, .9), WARM, cx, 4.2, -5.2).castShadow = false;
-      plate(name, cx, ZF + .04, 1.6); });
+      plate(name, cx, ZF + .04, 2.35); });
   }
   // 前方大廳：兩組金邊植栽（靠前窗兩側，不擋視線）、一盞暖光
   [[-9, 8.6], [9, 8.6]].forEach(p => { add(new THREE.CylinderGeometry(.3, .24, .6, 10), MT.pot, p[0], .3, p[1]); add(new THREE.IcosahedronGeometry(.6, 0), MT.plant, p[0], 1.15, p[1]); add(new THREE.CylinderGeometry(.31, .31, .04, 10), MT.gold, p[0], .6, p[1]); });
@@ -136,7 +143,7 @@ export function initCeo8F(ctx) {
     [-1, 1].forEach(s => { pub(B(1.12, 2.8, .08), DW, s * .575, 1.4, fz + .1); pub(B(.9, 2.4, .02), DW2, s * .575, 1.42, fz + .15);
       pub(B(.05, .5, .06), MT.gold, s * .1, 1.25, fz + .17); });
     [-1, 1].forEach(s => { pub(new THREE.CylinderGeometry(.09, .09, .3, 10), SOFT, s * 1.55, 2.45, fz + .14).castShadow = false; pub(B(.12, .04, .14), MT.gold, s * 1.55, 2.28, fz + .1); });
-    plate('總經理室', 0, fz + .14, 1.1, PUB).position.y = y0 + 3.3;
+    plate('籌備中', 0, fz + .14, 2.6, PUB).position.y = y0 + 3.45;
   }
   const apply = on => { INT.visible = !!on; PUB.visible = !on; };
   apply(D.body.classList.contains('team'));
