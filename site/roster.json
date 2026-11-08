@@ -60,6 +60,15 @@
    "form": "cube",
    "palette": "KOC",
    "name": "KOC小精靈"
+  },
+  {
+   "id": "preview-shusheng",
+   "floor": 3,
+   "desk": 3,
+   "skin": "shusheng_cat",
+   "form": "cat",
+   "name": "樞昇",
+   "preview": true
   }
  ]
 }

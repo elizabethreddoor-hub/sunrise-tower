@@ -32,8 +32,10 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { buildCat, poseCat, CAT_TAG_H } from './cat_model.js';
 const box = document.getElementById('three');
 const Q = new URLSearchParams(location.search), SHOT = Q.get('shot') || '';
+const CAT_PREVIEW = Q.get('catpreview') === '1'; // 方塊貓預覽：沒有這個參數就不建立貓居民，合併後公開站也不會出現
 // 作息表（v0.6 起動作只看作息表，與心跳無關）：亂數以「台北時間的 10 分鐘時段」當種子，讓同一時刻開網頁的人看到同一個起始畫面（?at=2026-10-26T15:20 固定模擬時間；?sched=0 關閉）
 const SCHED_ON = Q.get('sched') !== '0', SIM0 = Q.get('at') ? Date.parse(Q.get('at') + ':00+08:00') : null, LOAD0 = Date.now();
 const schedNow = () => SIM0 !== null && !isNaN(SIM0) ? SIM0 + (SHOT ? 0 : Date.now() - LOAD0) : Date.now();
@@ -311,16 +313,28 @@ function buildBlock(id, scale) { const M0 = skinMats(id); if (!M0) return null; 
   r.armR = mk(part('rarm', 'rsleeve', px, -4, 4, 12, 4), g, -6 * px, 22 * px); r.armL = mk(part('larm', 'lsleeve', px, -4, 4, 12, 4), g, 6 * px, 22 * px);
   g.userData.rig = r; g.userData.M = M; g.userData.px = px; scene.add(g); return g; }
 const ROSTER_NM = {};
-function setRoster(r) { ((r && r.residents) || []).forEach(a => { if (a && a.id && a.name) ROSTER_NM[a.id] = String(a.name).slice(0, 12); }); const all = ((r && r.residents) || []).filter(a => a && (a.skin || a.id) && FLOOR_ID[a.floor] && floorY[FLOOR_ID[a.floor]] !== undefined);
-  window.P7_CUBE_ROSTER = all.filter(a => a.form === 'cube').map(a => { const fid = FLOOR_ID[a.floor], stn = STATION[fid] && STATION[fid][+a.desk]; return Object.assign({}, a, { fid }, stn ? { xz: [stn.x, stn.cz !== undefined ? stn.cz : stn.z], ry: stn.ry || 0, ax: stn.ax } : {}); }); 
-  const list = all.filter(a => a.form !== 'cube').slice(0, RMAX);
-  RES.forEach(p => { p.tag.remove(); if (p.bub) p.bub.remove(); if (p.sayEl) p.sayEl.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0;
-  list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], stn = STATION[fid] && STATION[fid][+a.desk], d = stn ? [stn.x, stn.z + .8] : deskPos(+a.desk || 0), sc = +a.scale || 1;
-    const p = { res: true, id: String(a.id || a.skin || ''), bld: a.building || 'sunrise', want: null, dim: 0, fid, sc, ph: Math.random() * 6, home: [d[0], d[1] - .8], x: d[0], z: d[1] - .8, ry: (stn && stn.ry) || 0, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0 };
-    p.desk = +a.desk || 0; if (stn) { p.ax = stn.ax; if (stn.ry) p.hry = stn.ry; } p.g = buildBlock(a.skin || a.id, sc);
+// form 是每個角色的體型：省略＝方塊人，cube＝方塊精靈，cat＝成年方塊貓。preview 列只有 ?catpreview=1 才建立。
+const bodyOf = a => (a && (a.body === 'cat' || a.form === 'cat')) ? 'cat' : (a && a.form === 'cube') ? 'cube' : 'human';
+const CAT_PREVIEW_ROW = { id: 'preview-shusheng', floor: 3, desk: 3, skin: 'shusheng_cat', form: 'cat', name: '樞昇', preview: true }; // 3F desk 3 空位（Vera=2、造型師=4、KOC=6）
+function withCatPreview(r) { const residents = ((r && r.residents) || []).slice(); if (CAT_PREVIEW && !residents.some(a => a && a.id === CAT_PREVIEW_ROW.id)) residents.push(CAT_PREVIEW_ROW); return Object.assign({}, r, { residents }); }
+const CAT_CUSH = [];
+function clearCatCushions() { while (CAT_CUSH.length) scene.remove(CAT_CUSH.pop()); }
+function addCatCushion(x, y, z) { const g = new THREE.Group(), pad = new THREE.Mesh(new THREE.BoxGeometry(.62, .06, .48), new THREE.MeshLambertMaterial({ color: 0xE6D3C4 })), rim = new THREE.Mesh(new THREE.BoxGeometry(.66, .02, .52), new THREE.MeshLambertMaterial({ color: 0xC6A48C }));
+  pad.position.y = .05; rim.position.y = .02; [pad, rim].forEach(m => { m.castShadow = true; m.receiveShadow = true; m.raycast = () => {}; g.add(m); }); g.position.set(x, y, z); g.name = 'CAT_CUSHION'; scene.add(g); CAT_CUSH.push(g); }
+function setRoster(r) { ((r && r.residents) || []).forEach(a => { if (a && a.id && a.name) ROSTER_NM[a.id] = String(a.name).slice(0, 12); }); const all = ((r && r.residents) || []).filter(a => a && (a.skin || a.id) && FLOOR_ID[a.floor] && floorY[FLOOR_ID[a.floor]] !== undefined && (!a.preview || CAT_PREVIEW));
+  window.P7_CUBE_ROSTER = all.filter(a => bodyOf(a) === 'cube').map(a => { const fid = FLOOR_ID[a.floor], stn = STATION[fid] && STATION[fid][+a.desk]; return Object.assign({}, a, { fid }, stn ? { xz: [stn.x, stn.cz !== undefined ? stn.cz : stn.z], ry: stn.ry || 0, ax: stn.ax } : {}); }); 
+  const list = all.filter(a => bodyOf(a) !== 'cube').slice(0, RMAX);
+  RES.forEach(p => { p.tag.remove(); if (p.bub) p.bub.remove(); if (p.sayEl) p.sayEl.remove(); if (p.g) scene.remove(p.g); }); RES.length = 0; clearCatCushions();
+  list.forEach((a, j) => { const fid = FLOOR_ID[a.floor], stn = STATION[fid] && STATION[fid][+a.desk], d = stn ? [stn.x, stn.z + .8] : deskPos(+a.desk || 0), sc = +a.scale || 1, cat = bodyOf(a) === 'cat';
+    let hx = d[0], hz = d[1] - .8, hry = (stn && stn.ry) || 0; if (cat && !stn) { hx = d[0] + 1.5; hz = d[1]; hry = 0; } // 座墊在桌側空檔，不坐人的椅子
+    const p = { res: true, id: String(a.id || a.skin || ''), bld: a.building || 'sunrise', want: null, dim: 0, fid, sc, ph: Math.random() * 6, home: [hx, hz], x: hx, z: hz, ry: hry, y: floorY[fid] + T, seat: 1, sitT: rnd(10, 30), to: null, pause: 0, cat, preview: !!a.preview };
+    p.desk = +a.desk || 0; if (stn) { p.ax = stn.ax; if (stn.ry) p.hry = stn.ry; }
+    if (cat) { p.hry = hry; p.ax = [-9, -6, -3].reduce((q, w) => Math.abs(w - hx) < Math.abs(q - hx) ? w : q); const sid = a.skin || a.id; if (!SKINS[sid]) SKINS[sid] = 'skins/' + sid + '.png'; p.g = buildCat(SKINS[sid], sc); if (p.g) scene.add(p.g); addCatCushion(hx, floorY[fid] + T, hz); }
+    else p.g = buildBlock(a.skin || a.id, sc);
     const tag = document.createElement('div'); tag.className = 'ntag'; box.appendChild(tag); p.tag = tag;
     const bub = document.createElement('div'); bub.className = 'bub'; box.appendChild(bub); p.bub = bub; RES.push(p); });
-  RES.forEach(p => { p.bubT = ''; }); if (window.P7_cubeRoster) window.P7_cubeRoster(window.P7_CUBE_ROSTER); if (LAST_ST) applyStatus(LAST_ST); else schedAll(); }
+  RES.forEach(p => { p.bubT = ''; }); if (window.P7_cubeRoster) window.P7_cubeRoster(window.P7_CUBE_ROSTER); if (LAST_ST) applyStatus(LAST_ST); else schedAll();
+  window.P7_cat = () => RES.filter(p => p.cat).map(p => ({ id: p.id, name: ROSTER_NM[p.id] || '', fid: p.fid, x: +p.x.toFixed(2), z: +p.z.toFixed(2), act: p.act, seat: p.seat, sched: p.schedA, preview: !!p.preview })); }
 // v0.3：資料方塊精靈加入作息表，跟人一樣走動（漂浮移動，高度 1.25 m）；點擊名牌仍由 cube_sprite.js 處理
 window.P7_cubeRegister = list => { for (let i = RES.length - 1; i >= 0; i--) if (RES[i].cube) { RES[i].tag.remove(); RES.splice(i, 1); }
   list.forEach((s, j) => { const fid = s.fid, x = s.g.position.x, z = s.g.position.z; const tag = document.createElement('div'); tag.className = 'ntag'; box.appendChild(tag);
@@ -328,7 +342,7 @@ window.P7_cubeRegister = list => { for (let i = RES.length - 1; i >= 0; i--) if 
     const q = { res: true, cube: s, id: s.id, bld: s.building || 'sunrise', want: null, dim: 0, fid, sc: 1, ph: j, home: [x, z], x, z, ry: hry, y: floorY[fid] + T, seat: 1, sitT: 30, to: null, pause: 0, g: s.g, tag };
     if (hry) q.hry = hry; if (ra.ax !== undefined) q.ax = ra.ax; RES.push(q); });
   applyStatus(LAST_ST || [], LAST_NM === null ? undefined : LAST_NM); };
-function poseBlock(p, m, t) { if (p.cube) { p.g.position.set(p.x, p.y + 1.25, p.z); p.g.rotation.y = p.ry; return; } const g = p.g, R = g.userData.rig, px = g.userData.px; let sw = 0; g.position.set(p.x, p.y, p.z); g.rotation.y = p.ry;
+function poseBlock(p, m, t) { if (p.cube) { p.g.position.set(p.x, p.y + 1.25, p.z); p.g.rotation.y = p.ry; return; } if (p.cat) { if (p.g) poseCat(p, m, t); return; } const g = p.g, R = g.userData.rig, px = g.userData.px; let sw = 0; g.position.set(p.x, p.y, p.z); g.rotation.y = p.ry;
   ['torso', 'head', 'legL', 'legR', 'armL', 'armR'].forEach(k => R[k].rotation.set(0, 0, 0));
   if (m === 'live') { const k = Math.sin(t * 2.6 + p.ph), q = Math.sin(t * 1.3 + p.ph); g.position.y = p.y + Math.abs(Math.sin(t * 2.6 + p.ph)) * .025; // v0.8 直播：面向鏡頭，右手揮動介紹、左手拿商品、頭輕點、身體微晃
     R.armR.rotation.x = -1.25 + k * .35; R.armR.rotation.z = .25 + Math.max(0, k) * .3; R.armL.rotation.x = -.95; R.armL.rotation.z = -.12; R.head.rotation.x = Math.sin(t * 2.6 + p.ph + 1) * .08; R.head.rotation.y = q * .18; R.torso.rotation.y = q * .06; return; }
@@ -367,7 +381,7 @@ const CUPG = B(.09, .12, .09), CUPM = new THREE.MeshLambertMaterial({ color: 0xF
    [2.9, .08, .7, -.3, 2.3, -1.38, 0xF08A24], [4.42, .12, 2.12, 0, 2.42, 0, 0xF08A24], [1.0, .5, .04, 2.75, 1.25, -1.01, 0x9fc8ee]].forEach(q => { const m = new THREE.Mesh(B(q[0], q[1], q[2]), M(q[6])); m.position.set(tx + q[3], y + q[4], tz + q[5]); m.castShadow = true; g.add(m); });
   [[-1.4, -1], [1.4, -1], [-1.4, 1], [2.7, -1], [2.7, 1], [1.4, 1]].slice(0, 4).forEach(w => { const m = new THREE.Mesh(B(.6, .6, .25), M(0x22262E)); m.position.set(tx + w[0], y + .3, tz + w[1] * 1.0); g.add(m); });
   g.name = 'FOODTRUCK'; g.traverse(o => { if (o.isMesh) o.raycast = () => {}; }); OUTSET.add(g); }
-function cupSet(p, on) { if (!p.g || p.cube) { p.cup = !!on; return; } if (on && !p.cupM) { p.cupM = new THREE.Mesh(CUPG, CUPM); p.cupM.position.set(0, -11 * p.g.userData.px, 2.5 * p.g.userData.px); p.g.userData.rig.armR.children[0].add(p.cupM); } if (p.cupM) p.cupM.visible = !!on; p.cup = !!on; }
+function cupSet(p, on) { if (!p.g || p.cube || p.cat) { p.cup = !!on; return; } if (on && !p.cupM) { p.cupM = new THREE.Mesh(CUPG, CUPM); p.cupM.position.set(0, -11 * p.g.userData.px, 2.5 * p.g.userData.px); p.g.userData.rig.armR.children[0].add(p.cupM); } if (p.cupM) p.cupM.visible = !!on; p.cup = !!on; }
 function coffeeGoal(p) { const q = Math.floor(Math.random() * 3); return { fid: '1F', x: ICAFE.q[q][0], z: ICAFE.q[q][1], ry: Math.PI, act: 'look', cafe: 1 }; }
 function busy(p) { return p.path.length > 0 || p.mode === 'wander' || p.mode === 'coffee' || (p.hold || 0) > 0; }
 function rinit(p) { if (p.hf) return; p.hf = p.fid; p.mode = 'desk'; p.path = []; p.dim = 0; }
@@ -388,7 +402,7 @@ function lobbyChain(x, z) { // 從某點走到大廳走道的路徑點（最後�
 const ROUTE_DBG = Q.get('route') ? [] : null; window.P7_routes = ROUTE_DBG ? [] : null;
 const CZ = fid => fid === '5F' ? .3 : 2.7; // 各樓層的橫向走道（5F 書房長桌在 z 1.7–3.3，改走 z 0.3）
 const SPD = Math.min(20, Math.max(1, +(Q.get('spd') || 1))); // 除錯：spd=倍速（驗證路線用）
-const backOf = p => p.cube ? 1.4 : .6, bsg = p => p.hry ? 1 : -1; // 座位後方的走道距離（人＝椅子後 0.6 m；方塊精靈的位置在桌子上方，退 1.4 m 到椅子後）
+const backOf = p => p.cube ? 1.4 : p.cat ? 1.35 : .6, bsg = p => p.hry ? 1 : -1; // 座位後方的走道距離（人＝椅子後 0.6 m；貓從座墊再退到桌後；方塊精靈退 1.4 m）
 function plan(p) { const g = p.g2; p.pend = 0; p.path = [];
   if (p.fid === g.fid && Math.hypot(p.x - g.x, p.z - g.z) < .05) { p.act = g.act; p.ry = g.ry; p.seat = /sit|rest/.test(g.act) ? 1 : 0; return; } p.act = 'walk'; p.seat = 0;
   const exitM = p.atMeet && p.mc && p.fid === p.mcf; if (exitM) p.path.push(...meetExit(p.mc, p.mcf)); p.atMeet = g.meet ? 1 : 0; p.mc = g.meet ? [g.x, g.z, g.ry] : null; p.mcf = g.meet ? g.fid : null; // 從會議桌離開：先退回椅子後方→繞出桌子→走道
@@ -451,7 +465,7 @@ function tagSet(p, nm, r) { const st = r && r.id ? (r.state === 'work' ? 'work' 
   const t = document.createElement('small'); t.textContent = lt; p.tag.appendChild(t); }
 function applyStatus(list, names) { LAST_ST = list; if (names !== undefined) LAST_NM = names || null; const by = {}; (list || []).forEach(r => { by[String(r.id).replace(/^home_/, '')] = r; });
   const MG = meetGoals(list || []); // 只用來把討論中的對話泡泡分組，不再移動人物
-  RES.forEach(p => { rinit(p); const r = by[p.id] || {}; const nm = r.name || (LAST_NM && LAST_NM[p.id]) || '';
+  RES.forEach(p => { rinit(p); const r = by[p.id] || {}; const nm = r.name || (LAST_NM && LAST_NM[p.id]) || (p.preview && document.body.classList.contains('team') ? (ROSTER_NM[p.id] || '') : '');
     tagSet(p, nm, r); p.want = r.state === 'meet' && MG[p.id] ? 'meet' : r.state === 'work' ? 'work' : 'idle'; p.bubT = r.activity ? String(r.activity).slice(0, 18) : ''; });
   schedAll();
   // team-view speech bubbles: only residents whose AI sent a say/msg text (backend returns these only to team tokens)
@@ -508,6 +522,7 @@ const LOUNGE = { '6F': [[-1, 3.1, -6.75], [1, 3.1, -6.75], [-1, 2.2, -8.1], [1, 
 LOUNGE['6F'].forEach(c => { c.ry = c.x < 0 ? Math.PI / 2 : -Math.PI / 2; });
 const liveOf = p => { const s = STATION[p.hf]; return s && p.desk !== undefined && s[p.desk] && s[p.desk].live; };
 function canDo(p, a) { const B = BLDG[bldOf(p)]; rinit(p);
+  if (p.cat && (a === 'live' || a === 'out' || a === 'read5f' || a === 'lounge' || a === 'coffee')) return false; // 貓不做直播、開車、閱讀椅、沙發、拿杯子
   if (a === 'roof') { const R = B.roof && B.roof(); return !!(R && R.route && R.route.length && R.spots && R.spots.length); }
   if (a === 'live') return !!liveOf(p) && !p.cube;
   if (a === 'lounge') return !!(LOUNGE[p.hf] && LOUNGE[p.hf].length);
@@ -520,17 +535,21 @@ const MCH6 = [[-1.2, -4.1, 0], [0, -4.1, 0], [1.2, -4.1, 0], [-1.2, -1.9, Math.P
 function meetIn(c, fid) { if (fid === '7F') { const sx = c[0] < 0 ? -2.9 : 2.9; return c[2] ? [[c[0], 2.7]] : [[sx, 2.7], [sx, -2.1]]; } // 7F：前排從走道直接進；後排從桌子同側繞過去
   if (fid === '6F') return c[2] ? [[c[0], 2.7]] : [[2.6, 2.7], [2.6, -4.7]]; return c[2] ? [[c[0], 2.7]] : [[4.2, 2.7], [4.2, -3.7]]; } // 前排椅子從走道直接進；後排椅子繞桌子左側，不穿過桌子
 function meetExit(c, fid) { return [[c[0], c[1] + (c[2] ? .6 : -.6)]].concat(meetIn(c, fid).reverse()); }
+const CAT_MEET = { '6F': [[-3.4, -5.2, 0], [3.4, -5.2, 0]], '7F': [[-3.4, 2.4, Math.PI], [3.4, -2.4, 0]], def: [[3.2, -4.6, .5], [10.8, -4.6, -.5], [3.2, .4, 2.4], [10.8, .4, -2.4]] };
+function catMeet(fid) { return CAT_MEET[fid] || CAT_MEET.def; }
 function admit(p, a, ms) { // 依名額決定這一刻能不能做；不能就改坐位子。回傳 [動作, 占用的名額 key]
   const b = bldOf(p), B = BLDG[b];
+  if (p.cat && (a === 'out' || a === 'live' || a === 'read5f' || a === 'lounge' || a === 'coffee' || a === 'lobby_wait')) return ['desk_work'];
   if (a === 'meeting') { const fid = p.hf; if (!B.meetFloor(fid)) return ['desk_work'];
     const n = RES.filter(q => q.sched && bldOf(q) === b && q.hf === fid && actNow(q, ms) === 'meeting').length; if (n < 2) return ['desk_work']; // 本樓層不到 2 人就不開
+    if (p.cat) { const ns = 'mc:' + b + ':' + fid, i = claim(ns, catMeet(fid).length, p); if (i < 0) return ['desk_work']; p.slotI = i; return ['meeting', ns]; } // 地面位子，不占人的椅子
     const ns = 'm:' + b + ':' + fid, i = claim(ns, MCH_OF(fid).length, p); if (i < 0) return ['desk_work']; p.slotI = i; return ['meeting', ns]; }
   if (a === 'read5f') { if (!B.read || floorY[B.read] === undefined) return ['desk_work']; const ns = 'r:' + b, i = claim(ns, READ5.length, p); if (i < 0) return ['desk_work']; p.slotI = i; return ['read5f', ns]; }
   if (a === 'out') { if (!B.cars) return ['desk_work'];
     let c = p.car !== undefined ? CARS[p.car] : null; if (!(c && c.resv === p)) { p.car = undefined; const j = CARS.findIndex(q => q.on && q.state === 'parked' && !q.resv); if (j >= 0) { CARS[j].resv = p; p.car = j; c = CARS[j]; } }
     if (c) return ['out'];
     const ns = 'w:' + b, i = claim(ns, LWAIT.length, p); if (i < 0) return ['desk_work']; p.slotI = i; return ['lobby_wait', ns]; } // 車都出去了：在大廳門口等，有車回來就出發
-  if (a === 'roof') { if (!canDo(p, 'roof')) return ['desk_work']; const R = B.roof(); if (p.id === 'mira' && R.miraSpot) { p.slotI = -1; return ['roof']; }
+  if (a === 'roof') { if (!canDo(p, 'roof')) return ['desk_work']; const R = B.roof(); if (p.cat) { const idx = []; R.spots.forEach((s, i) => { if (s.act === 'look') idx.push(i); }); if (!idx.length) return ['desk_work']; const ns = 'pkc:' + b, i = claim(ns, idx.length, p); if (i < 0) return ['desk_work']; p.slotI = idx[i]; return ['roof', ns]; } if (p.id === 'mira' && R.miraSpot) { p.slotI = -1; return ['roof']; }
     const ns = 'pk:' + b, i = claim(ns, R.spots.length, p); if (i < 0) return ['desk_work']; p.slotI = i; return ['roof', ns]; }
   if (a === 'live') return canDo(p, 'live') ? ['live'] : ['desk_work'];
   if (a === 'lounge') { if (!canDo(p, 'lounge')) return ['desk_work']; const ns = 'l:' + b + ':' + p.hf, L = LOUNGE[p.hf], i = claim(ns, L.length, p, k => Math.hypot(L[k].x - p.home[0], L[k].z - p.home[1])); if (i < 0) return ['desk_work']; p.slotI = i; return ['lounge', ns]; }
@@ -539,6 +558,7 @@ function admit(p, a, ms) { // 依名額決定這一刻能不能做；不能就�
   return [a]; }
 function schedGoalOf(p, a, slot) { const u = k => hh(p.id + ':' + slot + ':' + k);
   if (a === 'desk_work') return deskGoal(p, 'sit');
+  if (a === 'meeting' && p.cat) { const c = catMeet(p.hf)[p.slotI] || catMeet(p.hf)[0], ax = AX(p, p.home[0]); return { fid: p.hf, x: c[0], z: c[1], ry: c[2] || 0, act: 'sit', via: [[ax, CZ(p.hf)], [c[0], CZ(p.hf)]] }; }
   if (a === 'meeting') { const c = MCH_OF(p.hf)[p.slotI], head = p.fid === p.hf && !p.atMeet ? [[AX(p, p.x), p.home[1] + bsg(p) * backOf(p)], [AX(p, p.x), 2.7]] : []; return { fid: p.hf, x: c[0], z: c[1], ry: c[2], act: 'msit', meet: 1, via: head.concat(meetIn(c, p.hf)) }; }
   if (a === 'read5f') { const c = READ5[p.slotI]; return { fid: BLDG[bldOf(p)].read, x: c[0], z: c[1], ry: c[2], act: 'msit', via: [[c[0], c[1] + (c[2] ? 1 : -1)]] }; }
   if (a === 'out') { const c = CARS[p.car], cx = c.home[0] + .3, cz = c.home[1] - 1.2; return { fid: '1F', x: cx, z: cz, ry: Math.PI / 2, act: 'look', car: p.car, via: [[0, 8], [0, 11.3], [0, 12.2], [cx, 12.2]] }; }
@@ -554,7 +574,8 @@ function schedGoalOf(p, a, slot) { const u = k => hh(p.id + ':' + slot + ':' + k
   if (a === 'wander') { const r = u('f'), fid = r < .65 ? p.hf : r < .9 ? OFFICE_FIDS[Math.floor(u('o') * 3)] : '1F', A = fid === '1F' ? { x: [-3, 3], z: [2.5, 8] } : { x: [-12, 11], z: [3, 7.5] };
     return { fid, x: A.x[0] + u('x') * (A.x[1] - A.x[0]), z: A.z[0] + u('z') * (A.z[1] - A.z[0]), ry: u('r') * 6 - 3, act: 'look' }; }
   return deskGoal(p, 'sit'); }
-function schedOne(p) { rinit(p); const ms = schedNow(), sg = segAt(p, ms), slot = sg.i; let a = actNow(p, ms);
+function holdCatWalk(p) { p.schedA = 'wander'; p.schedK = 'catpose-walk'; p.x = p.home[0]; p.z = p.home[1] - 1.15; p.ry = 0; p.act = 'walk'; p.seat = 0; p.spd = .9; p.walkD = .42; p.swing = .4; p.path = [[p.home[0], p.home[1]]]; p.fid = p.hf; p.y = fH(p.hf) + T; p.away = 0; if (p.g) p.g.visible = true; }
+function schedOne(p) { rinit(p); if (p.cat && Q.get('catpose') === 'walk') { holdCatWalk(p); return; } const ms = schedNow(), sg = segAt(p, ms), slot = sg.i; let a = actNow(p, ms);
   if (p.away && a === 'out') return; // 已經開車出去的人，維持外出
   const ad = admit(p, a, ms); a = ad[0]; releaseExcept(p, ad[1]);
   if (a !== 'out' && p.car !== undefined && !p.away) { const c = CARS[p.car]; if (c && c.resv === p && c.state === 'parked') c.resv = null; p.car = undefined; } // 還沒上車就換動作：把車讓出來
@@ -586,7 +607,7 @@ function makeCar(i) { const x = CAR_SLOTS[i], col = CAR_COL[i % 3], GL = carMat(
   add(3.6, .7, 1.7, 0, .65, 0, carMat(col)); add(2, .6, 1.5, .2, 1.3, 0, carMat(col)); add(2.04, .4, 1.54, .2, 1.32, 0, GL); add(.06, .4, 1.3, -.82, 1.3, 0, GL);
   [[-1.15, -.8], [1.15, -.8], [-1.15, .8], [1.15, .8]].forEach(w => add(.6, .6, .25, w[0], .3, w[1], TY));
   g.name = 'CAR_' + i; scene.add(g); const c = { g, home: [x, 13.6], d: 0, state: 'parked', rider: null, resv: null, on: true }; CARS.push(c); carPose(c); }
-function carsWanted() { const n = RES.filter(p => bldOf(p) === 'sunrise').length; return Math.min(CAR_SLOTS.length, Math.max(1, Math.ceil(n / CAR_PER))); }
+function carsWanted() { const n = RES.filter(p => bldOf(p) === 'sunrise' && !p.cat).length; return Math.min(CAR_SLOTS.length, Math.max(1, Math.ceil(n / CAR_PER))); }
 function syncCars() { const n = carsWanted(); while (CARS.length < n) makeCar(CARS.length); CARS.forEach((c, i) => { c.on = i < n; carPose(c); }); }
 for (let i = 0; i < 3; i++) makeCar(i);
 { let lt = performance.now(); setInterval(() => { const now = performance.now(), dt = Math.min(.2, (now - lt) / 1000); lt = now; if (SHOT) return;
@@ -632,14 +653,14 @@ function dimSync(p) { const ms = p.g && p.g.userData.M; if (!ms) return; const k
   ms.forEach(m => { m.color.setRGB(k, k, k * 1.08); }); }
 function resStep(p, dt, t) { rinit(p);
   if (!p.g2) { p.g2 = deskGoal(p, p.want === undefined || p.want === null ? 'sit' : 'rest'); p.act = p.g2.act; p.seat = 1; }
-  if (p === RES[0]) doorTick(dt); if (p.hold > 0) p.hold -= dt; if (SHOT) return p.path.length ? 'walk' : p.act;
+  if (p === RES[0]) doorTick(dt); if (p.hold > 0) p.hold -= dt; if (SHOT) return p.path.length ? 'walk' : p.act; if (p.cat) p.spd = 0;
   if (p.pause > 0) { p.pause -= dt; return 'idle'; }
   if (p.path.length) { const w = p.path[0];
     if (w.door) { doorOpen(w.door, w.sd); p.path.shift(); p.pause = .7; return 'idle'; }
     if (w.lift) { if (!p.inLift) { p.inLift = 1; p.g.visible = false; p.pause = 2.2; return 'idle'; } p.inLift = 0; p.g.visible = true; p.fid = w.lift; p.y = fH(w.lift) + T; doorOpen(w.lift, w.sd); p.path.shift(); p.pause = .7; p.ry = Math.PI; return 'idle'; }
     const dx = w[0] - p.x, dz = w[1] - p.z, d = Math.hypot(dx, dz);
     if (d < .06) { p.path.shift(); if (p.pend) { plan(p); return 'idle'; } if (!p.path.length) { p.x = w[0]; p.z = w[1]; p.ry = p.g2.ry; p.act = p.g2.act; p.seat = /sit|rest/.test(p.act) ? 1 : 0; p.stay = p.g2.cafe ? 5 : rnd(4, 9); p.sitT = rnd(25, 70); p.hold = 2.5; } return 'walk'; }
-    const v = Math.min(d, .9 * dt); p.x += dx / d * v; p.z += dz / d * v; const ry = Math.atan2(dx, dz); p.ry += Math.atan2(Math.sin(ry - p.ry), Math.cos(ry - p.ry)) * Math.min(1, dt * 6); return 'walk'; }
+    const v = Math.min(d, .9 * dt); p.x += dx / d * v; p.z += dz / d * v; const ry = Math.atan2(dx, dz); p.ry += Math.atan2(Math.sin(ry - p.ry), Math.cos(ry - p.ry)) * Math.min(1, dt * 6); if (p.cat) { p.spd = v / Math.max(dt, 1e-3); p.walkD = (p.walkD || 0) + v; } return 'walk'; }
   if (p.sched && p.g2 && p.g2.car !== undefined && p.schedA === 'out' && !p.away && p.act === 'look') { const c = CARS[p.g2.car]; p.away = 1; p.g.visible = false; c.rider = p; c.state = 'leaving'; c.d = 0; }
   if (p.sched && p.away) return 'idle';
   if (p.sched) { const cf = p.g2 && p.g2.cafe; if (cf && p.act === 'look' && !p.cup) cupSet(p, 1); if (!cf && p.cup && p.seat) cupSet(p, 0); return p.act === 'look' ? 'idle' : p.act; }
@@ -664,7 +685,7 @@ function people(dt, t) { PEOPLE.concat(RES).forEach((p, i) => { let sw = 0;
 const tv3 = new THREE.Vector3(); let LYSYNC = null;
 function focusFid() { let best = null, by = -1e9; Object.keys(floorY).forEach(f => { const y = floorY[f]; if (y <= controls.target.y + .3 && y > by) { by = y; best = f; } }); return best; }
 // v0.8：鏡頭看屋頂時（'PK'）只顯示屋頂上角色的名牌
-function tags() { if (LYSYNC) LYSYNC(); const RP = window.P7_roofPark, ff = RP && controls.target.y >= RP.y - .6 ? 'PK' : focusFid(); RES.forEach(p => { tv3.set(p.x, p.y + (p.seat ? .5 + 1.3 * p.sc : 2.05 * p.sc), p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
+function tags() { if (LYSYNC) LYSYNC(); const RP = window.P7_roofPark, ff = RP && controls.target.y >= RP.y - .6 ? 'PK' : focusFid(); RES.forEach(p => { const th = p.cat ? (p.seat ? CAT_TAG_H.sit : CAT_TAG_H.stand) * (p.sc || 1) : (p.seat ? .5 + 1.3 * p.sc : 2.05 * p.sc); tv3.set(p.x, p.y + th, p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
   const show = !!p.tag.textContent && dist < 45 && p.fid === ff && !(p.g && !p.g.visible) && !p.away && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? 'block' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; }
   p.tag.style.opacity = p.dim > .5 ? .55 : 1;
   if (p.sayT && !p.sayEl) { p.sayEl = document.createElement('div'); p.sayEl.className = 'say'; box.appendChild(p.sayEl); }
@@ -715,8 +736,8 @@ const clock = new THREE.Clock(); let last = 0;
 for (const [s, f] of [['floor4', 'RF'], ['floor2', '2F']]) if (SHOT === s) { const y = floorY[f]; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + 1.1, -1.5); camPos.set(-6.8, y + 3.6, 15.5); camera.position.copy(camPos); controls.target.copy(target); }
 if (false) { const y = floorY['RF']; controls.minDistance = 1; tweenT = 1; target.set(-6, y + 1.1, -.5); camPos.set(-5, y + 4.2, 17.5); camera.position.copy(camPos); controls.target.copy(target); }
 
-setRoster(ROSTER_FALLBACK);
-fetch('roster.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(r => { if (r && r.residents) { setRoster(r); people(0, 0); } }).catch(() => {});
+setRoster(withCatPreview(ROSTER_FALLBACK));
+fetch('roster.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(r => { if (r && r.residents) { setRoster(withCatPreview(r)); people(0, 0); } }).catch(() => {});
 for (let k = 0; k < 90; k++) people(1 / 30, k / 30);
 function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(), dt = Math.min(.1, t - last); last = t; if (!SHOT) people(dt * SPD, t); if (window.botStep) botStep(SHOT ? 0 : dt, SHOT ? 0 : t);
   if (tweenT < 1) { tweenT = Math.min(1, tweenT + dt / .8); const k = 1 - Math.pow(1 - tweenT, 3); camera.position.lerpVectors(from.p, camPos, k); controls.target.lerpVectors(from.t, target, k); }
@@ -780,6 +801,14 @@ import('./lite_building.js').then(m => m.initLiteBuilding({ THREE, scene, SHOT, 
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
 if (SHOT === 'close') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + .9, -2.6); camPos.set(-7.5, y + 3.4, 9.5); camera.position.copy(camPos); controls.target.copy(target); }
+if (SHOT === 'cat' || SHOT === 'catwalk' || SHOT === 'cattail') { const y = floorY['3F'], p = RES.find(q => q.cat), x = p ? p.x : -6, z = p ? p.z : -5.5; controls.minDistance = .2; controls.minPolarAngle = .12; controls.maxPolarAngle = 1.55; tweenT = 1;
+  if (SHOT === 'catwalk') { target.set(x, y + .42, z); camPos.set(x + 3.15, y + 1.45, z + 1.7); }
+  else if (SHOT === 'cattail') { target.set(x + .1, y + .7, z - .3); camPos.set(x - 2.15, y + 1.7, z - 2.05); }
+  else { target.set(x - .4, y + .58, z - .05); camPos.set(x + 2.55, y + 1.9, z + 4.7); }
+  camera.position.copy(camPos); controls.target.copy(target); }
+window.P7_catHit = () => { const p = RES.find(q => q.cat); if (!p || !p.g) return { ok: false }; const v = new THREE.Vector3(p.x, p.y + (p.seat ? .32 : .4), p.z); v.project(camera); mv.set(v.x, v.y); ray.setFromCamera(mv, camera); const hits = ray.intersectObjects([p.g], true); return { ok: true, hit: hits.length > 0, n: hits.length, sx: +v.x.toFixed(3), sy: +v.y.toFixed(3), tag: p.tag.textContent, show: p.tag.style.display, top: p.tag.style.top }; };
+window.P7_catTail = () => { const p = RES.find(q => q.cat); if (!p || !p.g || !p.g.userData.rig) return null; const R = p.g.userData.rig; return { y1: +R.tail1.rotation.y.toFixed(3), y2: +R.tail2.rotation.y.toFixed(3), x2: +R.tail2.rotation.x.toFixed(3) }; };
+window.P7_catBox = () => { const p = RES.find(q => q.cat); if (!p || !p.g) return null; p.g.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(p.g), s = b.getSize(new THREE.Vector3()); return { minY: +(b.min.y - p.y).toFixed(3), maxY: +(b.max.y - p.y).toFixed(3), h: +s.y.toFixed(3), w: +s.x.toFixed(3), d: +s.z.toFixed(3), lift: p.g.userData.sitLift, act: p.act, seat: p.seat }; };
 if (SHOT === 'floor3') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + 1.1, -1.5); camPos.set(-6.8, y + 3.6, 15.5); camera.position.copy(camPos); controls.target.copy(target); }
 if (SHOT === 'lobby') { const y = floorY['1F']; controls.minDistance = 1; tweenT = 1; target.set(0, y + 2.8, 0); camPos.set(1.5, y + 3.8, 26); camera.position.copy(camPos); controls.target.copy(target); }
 if (Q.get('az') !== null) { const az = +Q.get('az'), po = Math.min(1.55, +Q.get('pol')), d = +Q.get('dist'); tweenT = 1; controls.update(); const tg = controls.target.clone(); camera.position.set(tg.x + d * Math.sin(po) * Math.sin(az), tg.y + d * Math.cos(po), tg.z + d * Math.sin(po) * Math.cos(az)); camera.lookAt(tg); }
