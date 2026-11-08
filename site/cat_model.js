@@ -48,12 +48,16 @@ const STAND = {
   tail1: [0, 9, -8, 0.9], tail2: [0, 4, -14, 1.7278761],
   fl: [1.2, 9.9, 5, 0], fr: [-1.2, 9.9, 5, 0], hl: [1.1, 6, -5, 0], hr: [-1.1, 6, -5, 0],
 };
+// Sit keeps the vanilla chest angle. The haunch and tail pivots are shifted out of the body:
+// the raw CatModel tail and hind-leg pivots land inside the tilted torso, and the shared faces sawtooth.
+// Hind legs lie beside the chest; the tail starts just behind the rump and curls up to the side.
 const SIT = {
   head: [0, 12.3, 8, 0], body: [0, 16, 5, Math.PI / 4],
-  tail1: [0, 1, -6, 1.7278761], tail2: [0, 2, -13.2, 2.670354],
+  tail1: [1.15, 2.5, -8.2, 2.20], tail2: [1.15, 6.83, -14.14, 2.60],
   fl: [1.2, 7.9, 7, -Math.PI / 20], fr: [-1.2, 7.9, 7, -Math.PI / 20],
-  hl: [1.1, 3, -1, -Math.PI / 2], hr: [-1.1, 3, -1, -Math.PI / 2],
+  hl: [3.55, 0.9, 3.35, -Math.PI / 2], hr: [-3.55, 0.9, 3.35, -Math.PI / 2],
 };
+const SIT_TAIL_YAW = [-0.42, -0.38];
 
 export function buildCat(url, scale) {
   const px = PX0 * (scale || 1), mat = new THREE.MeshLambertMaterial({ map: catTex(url), alphaTest: .45 });
@@ -94,15 +98,16 @@ export function poseCat(p, mode, t) {
   const pose = sitting ? SIT : STAND;
   ['head', 'body', 'fl', 'fr', 'hl', 'hr'].forEach(k => put(R[k], pose[k], px));
   seatTail(R, pose, px);
-  let bob = 0;
+  let bob = 0, s1 = 0, s2 = 0;
   if (!REDUCE) {
     const sway = mode === 'rest' ? .34 : sitting ? .16 : .22;
-    const s1 = Math.sin(t * 1.15 + p.ph) * sway, s2 = Math.sin(t * 1.15 + p.ph - .65) * sway * 1.45;
-    R.tail1.rotation.y = s1; R.tail2.rotation.y = s2;
+    s1 = Math.sin(t * 1.15 + p.ph) * sway; s2 = Math.sin(t * 1.15 + p.ph - .65) * sway * 1.45;
     R.head.rotation.y = Math.sin(t * .42 + p.ph) * (mode === 'rest' ? .32 : sitting ? .1 : .14);
     R.head.rotation.x = Math.sin(t * .31 + p.ph * 2) * .045;
     bob = Math.sin(t * 1.7 + p.ph) * .006;
   }
+  R.tail1.rotation.y = (sitting ? SIT_TAIL_YAW[0] : 0) + s1;
+  R.tail2.rotation.y = (sitting ? SIT_TAIL_YAW[1] : 0) + s2;
   if (mode === 'walk') {
     const target = Math.min(.4, (p.spd || 0) * .5);
     p.swing = (p.swing || 0) + (target - (p.swing || 0)) * .22;
