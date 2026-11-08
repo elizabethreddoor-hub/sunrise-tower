@@ -1,7 +1,8 @@
 // 外牆發光條 v0.5：每一層樓都裝同款發光條（1F～7F 各一圈；預覽 floors-6-7 加上 6F、7F，6F 延後 1.5 秒、7F 延後 1.8 秒；預覽 ceo-office 加 8F，延後 2.1 秒），沿該層上緣樓板線四面環繞，上緣金邊。所有人看到同一組燈，燈上無文字。
 // 顏色全部由看板同一份狀態資料驅動（事件 p7-board-state）；拿不到資料時維持待確認暖灰。換色 0.8 秒漸變，所有樓層同時換。
 // 呼吸：週期 6.4 秒（3.2 秒漸亮＋3.2 秒漸暗，cosine 曲線，亮度 0.05→1.6）。由下往上每層延後 0.3 秒：1F 0 秒、2F 0.3 秒、3F 0.6 秒…
-// 相位差做法：每一幀都用同一個時鐘算 (t − 層序×300ms) mod 6400，不累加、不各自計時，所以不會累積誤差。只作用在本棟，隔壁紅九九Lite 不受影響。
+// 相位差做法：每一幀都用同一個時鐘算 (t − 層序×300ms) mod 6400，不累加、不各自計時，所以不會累積誤差。
+// 日上昇大樓的燈條只包本棟。紅九九Lite 另有一組同款燈條（1F 延後 0、2F 0.3 秒、3F 0.6 秒），共用同一時鐘與看板顏色。
 export function initLightStrip(ctx) {
   const { THREE, scene, floorY, SHOT, Q, camera, controls, camPos, target } = ctx;
   const COL = { PENDING: '#A39A8E', YELLOW: '#E3B04B', GREEN: '#4FA37A', RED: '#E53935' };
@@ -25,6 +26,26 @@ export function initLightStrip(ctx) {
       const e = new THREE.Mesh(B(w + .004, .012, d + .004), gold); e.position.set(x, yc + SH / 2 + .006, z); g.add(e); });
     return { mat, halo, lag: i * LAG };
   });
+  // 紅九九Lite：每一層上緣四面一圈，規則與本棟相同（待確認暖灰、看板換色、6.4 秒呼吸、由下往上每層 0.3 秒）。
+  const liteStrips = [];
+  const AN = window.P7_annex;
+  if (AN && AN.floors && AN.box) {
+    const lg = new THREE.Group(); lg.name = 'LIGHT_STRIP_LITE'; scene.add(lg);
+    const bx = AN.box, BW = bx.x1 - bx.x0, BD = bx.z1 - bx.z0, cx = (bx.x0 + bx.x1) / 2, cz = (bx.z0 + bx.z1) / 2;
+    AN.floors.forEach((f, i) => {
+      const matL = new THREE.MeshBasicMaterial({ color: COL.PENDING, toneMapped: false });
+      const haloL = new THREE.MeshBasicMaterial({ color: COL.PENDING, toneMapped: false, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+      const g = new THREE.Group(); g.name = 'LIGHT_STRIP_LITE_' + f.id; lg.add(g);
+      const OUT = GAP + SD / 2, top = f.y + f.h, yc = top + SH / 2 + .01;
+      const L = BW + 2 * (OUT + SD / 2), M = BD + 2 * (OUT + SD / 2);
+      [[cx, cz + BD / 2 + OUT, L, SD], [cx, cz - BD / 2 - OUT, L, SD], [cx + BW / 2 + OUT, cz, SD, M], [cx - BW / 2 - OUT, cz, SD, M]].forEach(([x, z, w, d]) => {
+        const s = new THREE.Mesh(B(w, SH, d), matL); s.position.set(x, yc, z); s.raycast = () => {}; g.add(s);
+        const h = new THREE.Mesh(B(w + .12, SH * 3.5, d + .12), haloL); h.position.set(x, yc, z); h.renderOrder = 2; h.raycast = () => {}; g.add(h);
+        const e = new THREE.Mesh(B(w + .004, .012, d + .004), gold); e.position.set(x, yc + SH / 2 + .006, z); e.raycast = () => {}; g.add(e);
+      });
+      liteStrips.push({ mat: matL, halo: haloL, lag: i * LAG });
+    });
+  }
   const cur = new THREE.Color(COL.PENDING), from = new THREE.Color(), to = new THREE.Color(COL.PENDING); let t0 = -1e9, state = 'PENDING';
   function set(s) { s = COL[s] ? s : 'PENDING'; if (s === state) return; state = s; from.copy(cur); to.set(COL[s]); t0 = performance.now(); }
   window.addEventListener('p7-board-state', e => set(e.detail && e.detail.status));
@@ -34,7 +55,7 @@ export function initLightStrip(ctx) {
   (function tick() { requestAnimationFrame(tick); const n = performance.now();
     cur.copy(from).lerp(to, ease(Math.min(1, (n - t0) / FADE)));
     const now = SHOT ? (lt != null ? +lt : PER / 2) : n;
-    strips.forEach(s => { const ph = ((now - s.lag) % PER + PER) % PER, w = .5 - .5 * Math.cos(2 * Math.PI * ph / PER), b = LO + (HI - LO) * w;
+    strips.concat(liteStrips).forEach(s => { const ph = ((now - s.lag) % PER + PER) % PER, w = .5 - .5 * Math.cos(2 * Math.PI * ph / PER), b = LO + (HI - LO) * w;
       s.mat.color.copy(cur).multiplyScalar(b); s.halo.color.copy(cur); s.halo.opacity = .6 * w * w; }); })();
   // 截圖用：glow＝右前角近看 1F～4F 燈條
   if (SHOT === 'glow' && camera) { const y = floorY['2F'] || 7; controls.minDistance = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.maxDistance = 200; target.set(6, y + 3.5, 8); camPos.set(30, y + 7, 36); camera.position.copy(camPos); controls.target.copy(target); }
