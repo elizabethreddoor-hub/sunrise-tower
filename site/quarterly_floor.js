@@ -1,6 +1,6 @@
 // 預覽：5F 季報書房（書局風）。只顯示季度、階段、更新時間、簡述；不放姓名、數字、帳號。資料為假資料。
 export function initQuarterlyFloor(ctx) {
-  const { THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target } = ctx, D = document;
+  const { THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target, mergeStatic } = ctx, D = document;
   if (floorY['5F'] === undefined) return; const y0 = floorY['5F'] + T;
   const grp = new THREE.Group(); grp.name = 'QUARTERLY_5F'; scene.add(grp);
   const M = c => new THREE.MeshStandardMaterial({ color: c, roughness: .8 }), B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
@@ -34,10 +34,10 @@ export function initQuarterlyFloor(ctx) {
   const X = 3.2, Z = -9.68, BW = 3.4, BH = 1.9, cv = D.createElement('canvas'); cv.width = 1024; cv.height = 572; const g = cv.getContext('2d');
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
   add(B(BW + .16, BH + .16, .06), WOOD, X, y0 + 2.2, Z);
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false })); face.position.set(X, y0 + 2.2, Z + .04); grp.add(face);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false })); face.position.set(X, y0 + 2.2, Z + .04); face.userData.dyn = 1; grp.add(face);
   add(B(BW + .4, .5, .08), WOOD2, X, y0 + 3.5, Z); // 招牌
   const sc = D.createElement('canvas'); sc.width = 512; sc.height = 64; const s2 = sc.getContext('2d'); s2.fillStyle = '#3A2414'; s2.fillRect(0, 0, 512, 64); s2.fillStyle = '#E9C77B'; s2.font = 'bold 40px "Noto Serif TC","Noto Sans TC",serif'; s2.textAlign = 'center'; s2.fillText('季報書房', 256, 46);
-  const st2 = new THREE.CanvasTexture(sc); st2.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(BW + .3, .42), new THREE.MeshBasicMaterial({ map: st2, toneMapped: false })); sg.position.set(X, y0 + 3.5, Z + .05); grp.add(sg);
+  const st2 = new THREE.CanvasTexture(sc); st2.colorSpace = THREE.SRGBColorSpace; const sg = new THREE.Mesh(new THREE.PlaneGeometry(BW + .3, .42), new THREE.MeshBasicMaterial({ map: st2, toneMapped: false })); sg.position.set(X, y0 + 3.5, Z + .05); sg.userData.dyn = 1; grp.add(sg);
   const STEPS = ['資料整理', '試算', '核對', '待核准', '已完成'];
   const data = { mock: 1, quarter: '2026 第 3 季', step: +(Q.get('qs') || 2), updated: '10/26 17:00（台灣時間）', note: '本季資料已整理完成，正在核對中。' };
   (function draw() { g.fillStyle = '#F3E9D6'; g.fillRect(0, 0, 1024, 572); g.fillStyle = '#7A4E2D'; g.fillRect(0, 0, 1024, 10); g.fillRect(0, 562, 1024, 10);
@@ -56,6 +56,7 @@ export function initQuarterlyFloor(ctx) {
   if (SHOT === 'q5' || SHOT === 'qb') syncBtn('5F');
   if (SHOT === 'q5') set(new THREE.Vector3(1, y0 + 1.4, -2), new THREE.Vector3(1.5, y0 + 4.2, 15));
   if (SHOT === 'qb') set(new THREE.Vector3(X, y0 + 2.1, Z), new THREE.Vector3(X + .3, y0 + 2.3, Z + 7.5));
+  if (mergeStatic) mergeStatic(grp, false, true);
 }
 // 預覽截圖時同步樓層按鈕亮起狀態（避免拉近 5F 時「全景」仍亮）
 export function syncBtn(f) { document.querySelectorAll('#fbar button').forEach(x => x.classList.toggle('on', x.dataset.f === f)); }

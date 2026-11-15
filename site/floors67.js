@@ -6,7 +6,7 @@
 //     螢幕只有抽象折線、長條、圓環、點陣，沒有任何數字或文字。v0.7：外匯小精靈進駐前左位（desk 1，座位表見 index.html STATION['7F']），其餘 3 張空椅子。
 // 座標與 index.html 一致：寬 30、深 20、樓高 4.68；電梯井在 x = ±14.25、z = 0。站位與會議椅座標在 index.html 的 STATION / MCH6。
 export function initFloors67(ctx) {
-  const { THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target } = ctx, D = document;
+  const { THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target, mergeStatic } = ctx, D = document;
   const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
   const L = c => new THREE.MeshLambertMaterial({ color: c });
   const GLOW = (c, k) => new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(k == null ? 1 : k), toneMapped: false });
@@ -72,7 +72,8 @@ export function initFloors67(ctx) {
     add(B(6.4, 2.4, .1), MT.white, 0, 2.0, -9.72); add(B(6.56, .06, .12), MT.gold, 0, 3.22, -9.7); add(B(6.56, .06, .12), MT.gold, 0, .8, -9.7);
     add(new THREE.CircleGeometry(.62, 32), MT.roseBg, -.55, 2.0, -9.66).castShadow = false; add(new THREE.CircleGeometry(.62, 32), MT.blueBg, .55, 2.0, -9.65).castShadow = false;
     { const cv = D.createElement('canvas'); cv.width = 512; cv.height = 96; const g = cv.getContext('2d'); g.fillStyle = '#2F6FB3'; g.fillRect(0, 0, 512, 96); g.fillStyle = '#E9C77B'; g.font = 'bold 56px "Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('網紅間', 256, 50);
-      const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const s = new THREE.Mesh(new THREE.PlaneGeometry(2.4, .45), new THREE.MeshBasicMaterial({ map: tx, toneMapped: false, color: 0xDDDDDD })); s.position.set(0, y0 + 3.6, -9.65); s.raycast = () => {}; grp.add(s); }
+      const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const s = new THREE.Mesh(new THREE.PlaneGeometry(2.4, .45), new THREE.MeshBasicMaterial({ map: tx, toneMapped: false, color: 0xDDDDDD })); s.position.set(0, y0 + 3.6, -9.65); s.raycast = () => {}; s.userData.dyn = 1; grp.add(s); }
+    if (mergeStatic) mergeStatic(grp, false, true);
   }
 
   // ===================== 7F 戰情室 =====================
@@ -121,15 +122,15 @@ export function initFloors67(ctx) {
     const HALO = new THREE.MeshBasicMaterial({ color: 0xA39A8E, toneMapped: false, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
     const PATH = (sx, sz) => { const x1 = HX - S1, x2 = x1 - (HZ - HW); return [[sx * HX, sz * HZ], [sx * x1, sz * HZ], [sx * x2, sz * HW], [sx * CS / 2, sz * HW]]; };
     const seg = (p, q, y, h, mat, halo) => { const dx = q[0] - p[0], dz = q[1] - p[1], len = Math.hypot(dx, dz), ry = Math.atan2(-dz, dx);
-      const o = new THREE.Mesh(B(len + SW, h, SW), mat); o.position.set((p[0] + q[0]) / 2, y0 + y, (p[1] + q[1]) / 2); o.rotation.y = ry; o.raycast = () => {}; grp.add(o);
-      if (halo) { const g = new THREE.Mesh(B(len + SW * 4, h * .5, SW * 5), HALO); g.position.copy(o.position); g.rotation.y = ry; g.renderOrder = 2; g.raycast = () => {}; grp.add(g); } };
+      const o = new THREE.Mesh(B(len + SW, h, SW), mat); o.position.set((p[0] + q[0]) / 2, y0 + y, (p[1] + q[1]) / 2); o.rotation.y = ry; o.raycast = () => {}; o.userData.dyn = 1; grp.add(o);
+      if (halo) { const g = new THREE.Mesh(B(len + SW * 4, h * .5, SW * 5), HALO); g.position.copy(o.position); g.rotation.y = ry; g.renderOrder = 2; g.raycast = () => {}; g.userData.dyn = 1; grp.add(g); } };
     const CEIL = 4.68 - T - .03;
     add(B(29.4, .02, 19.4), DK.wall, 0, CEIL + .02, 0).castShadow = false; // 深色天花板，讓天花板光條看得清楚
     [[FLM, FLF, .058, 1], [CLM, CLF, CEIL, -1]].forEach(([mm, mf, y, up]) => {
       [-1, 1].forEach(sx => [-1, 1].forEach(sz => { const P = PATH(sx, sz); for (let i = 0; i < 3; i++) seg(P[i], P[i + 1], y, .016, mm, up > 0); }));
       // 中心方形燈：淡淡的整面＋一圈亮邊
-      const f = new THREE.Mesh(B(CS, .01, CS), mf); f.position.set(0, y0 + y - up * .004, TZ); f.raycast = () => {}; grp.add(f);
-      [[0, CS / 2, CS + SW, SW], [0, -CS / 2, CS + SW, SW], [CS / 2, 0, SW, CS], [-CS / 2, 0, SW, CS]].forEach(([x, z, w, d]) => { const e = new THREE.Mesh(B(w, .016, d), mm); e.position.set(x, y0 + y, TZ + z); e.raycast = () => {}; grp.add(e); });
+      const f = new THREE.Mesh(B(CS, .01, CS), mf); f.position.set(0, y0 + y - up * .004, TZ); f.raycast = () => {}; f.userData.dyn = 1; grp.add(f);
+      [[0, CS / 2, CS + SW, SW], [0, -CS / 2, CS + SW, SW], [CS / 2, 0, SW, CS], [-CS / 2, 0, SW, CS]].forEach(([x, z, w, d]) => { const e = new THREE.Mesh(B(w, .016, d), mm); e.position.set(x, y0 + y, TZ + z); e.raycast = () => {}; e.userData.dyn = 1; grp.add(e); });
     });
     { let src = null; (function sync7() { requestAnimationFrame(sync7);
         if (!src) { const g = scene.getObjectByName('LIGHT_STRIP_7F'); if (g && g.children.length > 1) src = { m: g.children[0].material, h: g.children[1].material }; else return; }
@@ -152,16 +153,17 @@ export function initFloors67(ctx) {
     Object.entries(PARTS).forEach(([key, li]) => { const im = new THREE.InstancedMesh(B(1, 1, 1), key === 'edge' ? EDGE : RK[key], li.length);
       li.forEach((p, i) => { o3.position.set(p[3], y0 + p[4], p[5]); o3.rotation.set(0, p[6], 0); o3.scale.set(p[0], p[1], p[2]); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); });
       im.castShadow = key === 'body'; im.receiveShadow = true; im.raycast = () => {}; im.name = 'WAR_RACK_' + key; grp.add(im); });
-    { const lg = B(.035, .035, .02); leds.forEach((li, k) => { const im = new THREE.InstancedMesh(lg, LED[k], li.length); li.forEach((p, i) => { o3.position.set(p[0], y0 + p[1], p[2]); o3.rotation.set(0, p[3], 0); o3.scale.set(1, 1, 1); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); }); im.raycast = () => {}; im.name = 'WAR_LEDS_' + k; grp.add(im); }); }
+    { const lg = B(.035, .035, .02); leds.forEach((li, k) => { const im = new THREE.InstancedMesh(lg, LED[k], li.length); li.forEach((p, i) => { o3.position.set(p[0], y0 + p[1], p[2]); o3.rotation.set(0, p[3], 0); o3.scale.set(1, 1, 1); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); }); im.raycast = () => {}; im.userData.dyn = 1; im.name = 'WAR_LEDS_' + k; grp.add(im); }); }
     { const tl = new THREE.PointLight(0xCFE2FF, 6, 9, 1.4); tl.position.set(0, y0 + 3.4, TZ + 1); grp.add(tl); }
     if (!SHOT) { const base = LED.map(m => m.color.clone()); let t0 = performance.now(); (function blink() { requestAnimationFrame(blink); const t = (performance.now() - t0) / 1000; LED.forEach((m, k) => m.color.copy(base[k]).multiplyScalar(.35 + .65 * (Math.sin(t * (2.2 + k * 1.3) + k * 2) > -.2 ? 1 : 0))); })(); }
     const pg = new THREE.PlaneGeometry(1, 1);
-    lists.forEach((li, k) => { const im = new THREE.InstancedMesh(pg, SM[k], li.length); li.forEach((s, i) => { o3.position.set(s.x, y0 + s.y, s.z + .03 * Math.cos(s.ry)); o3.rotation.set(0, s.ry, 0); o3.scale.set(s.w, s.h, 1); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); }); im.raycast = () => {}; im.name = 'WAR_SCREENS_' + k; grp.add(im); SCR.push(im); });
+    lists.forEach((li, k) => { const im = new THREE.InstancedMesh(pg, SM[k], li.length); li.forEach((s, i) => { o3.position.set(s.x, y0 + s.y, s.z + .03 * Math.cos(s.ry)); o3.rotation.set(0, s.ry, 0); o3.scale.set(s.w, s.h, 1); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); }); im.raycast = () => {}; im.userData.dyn = 1; im.name = 'WAR_SCREENS_' + k; grp.add(im); SCR.push(im); });
     { const im = new THREE.InstancedMesh(B(1, 1, .05), DK.frame, frames.length); frames.forEach((s, i) => { o3.position.set(s.x, y0 + s.y, s.z); o3.rotation.set(0, s.ry, 0); o3.scale.set(s.w, s.h, 1); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); }); im.castShadow = true; im.raycast = () => {}; grp.add(im); }
     // v0.5：拿掉「戰情室」字樣；保留幾盞低亮度藍光
     [-9.5, 0, 9.5].forEach(x => { const l = new THREE.PointLight(0x5A8FE0, x ? 5 : 7, 14, 1.4); l.position.set(x, y0 + 3.6, x ? -4 : -1); grp.add(l); });
     // 折線、長條畫面慢慢往左捲動（截圖時不動）
     if (!SHOT) { let lt = performance.now(); (function tick() { requestAnimationFrame(tick); const n = performance.now(), dt = (n - lt) / 1000; lt = n; TEX[0].offset.x += dt * .03; TEX[1].offset.x += dt * .015; })(); }
+    if (mergeStatic) mergeStatic(grp, false, true);
   }
   window.P7_floors67 = { screens: SCR.reduce((a, m) => a + m.count, 0), racks: RACKS };
   if (SHOT === 'f6' && floorY['6F'] !== undefined) { const y = floorY['6F'] + T; sync('6F'); set(new THREE.Vector3(0, y + 1.9, -2), new THREE.Vector3(3.2, y + 4.2, 37)); }
