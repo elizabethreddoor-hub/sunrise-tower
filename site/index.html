@@ -173,16 +173,21 @@ function lobby1F(y, g, m) { const BZ1 = -D1 / 2 + .2, P = (geo, mm, x, yy, z) =>
   inst(XT(.65, .7), DS(L1.main), PL.map(p => [p[0], y + .35, p[1]]), g); inst(XT(1.3, 1.6, 1), DS(L1.green), PL.map(p => [p[0], y + 1.5, p[1]]), g);
 }
 
-function mergeStatic(root, shallow) {
-  root.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), byMat = new Map(), kill = [];
+function mergeStatic(root, shallow, keepShadow) {
+  root.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), byMat = new Map();
   root.traverse(o => { if (!o.isMesh || o.isInstancedMesh || o.userData.dyn || !o.material || o.material.visible === false || o === root) return;
     if (shallow && o.parent !== root) return;
     let p = o.parent; while (p && p !== root) { if (p.userData && p.userData.dyn) return; p = p.parent; }
+    if (keepShadow && (o.material.map || o.material.emissiveMap || o.material.alphaMap || o.material.transparent)) return;
     const geo = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); ['uv', 'uv1', 'uv2'].forEach(a => geo.deleteAttribute(a));
-    geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld)); const k = o.material.uuid + (o.renderOrder || 0);
-    if (!byMat.has(k)) byMat.set(k, { m: o.material, ro: o.renderOrder, list: [] }); byMat.get(k).list.push(geo); kill.push(o); });
-  kill.forEach(o => o.parent.remove(o));
-  byMat.forEach(v => { const geo = mergeGeometries(v.list, false); if (!geo) return; const me = new THREE.Mesh(geo, v.m); me.castShadow = true; me.receiveShadow = true; me.renderOrder = v.ro; me.name = 'merged_' + (v.m.name || ''); root.add(me); });
+    geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+    const sh = keepShadow ? (o.castShadow ? 1 : 0) + (o.receiveShadow ? 2 : 0) : 0;
+    const k = o.material.uuid + '|' + (o.renderOrder || 0) + '|' + sh;
+    if (!byMat.has(k)) byMat.set(k, { m: o.material, ro: o.renderOrder, list: [], kill: [], cast: !!o.castShadow, recv: !!o.receiveShadow });
+    const b = byMat.get(k); b.list.push(geo); b.kill.push(o); });
+  if (!keepShadow) { const kill = []; byMat.forEach(v => kill.push(...v.kill)); kill.forEach(o => o.parent.remove(o));
+    byMat.forEach(v => { const geo = mergeGeometries(v.list, false); if (!geo) return; const me = new THREE.Mesh(geo, v.m); me.castShadow = true; me.receiveShadow = true; me.renderOrder = v.ro; me.name = 'merged_' + (v.m.name || ''); root.add(me); }); return; }
+  byMat.forEach(v => { const geo = mergeGeometries(v.list, false); if (!geo) return; v.kill.forEach(o => { if (o.parent) o.parent.remove(o); }); const me = new THREE.Mesh(geo, v.m); me.castShadow = v.cast; me.receiveShadow = v.recv; me.renderOrder = v.ro; me.name = 'merged_' + (v.m.name || ''); root.add(me); });
 }
 
 const WINE = nm('SIGN_wine', 0x2F6FB3); 
@@ -685,8 +690,8 @@ function people(dt, t) { PEOPLE.concat(RES).forEach((p, i) => { let sw = 0;
 const tv3 = new THREE.Vector3(); let LYSYNC = null;
 function focusFid() { let best = null, by = -1e9; Object.keys(floorY).forEach(f => { const y = floorY[f]; if (y <= controls.target.y + .3 && y > by) { by = y; best = f; } }); return best; }
 // v0.8：鏡頭看屋頂時（'PK'）只顯示屋頂上角色的名牌
-function tags() { if (LYSYNC) LYSYNC(); const RP = window.P7_roofPark, ff = RP && controls.target.y >= RP.y - .6 ? 'PK' : focusFid(); RES.forEach(p => { const th = p.cat ? (p.seat ? CAT_TAG_H.sit : CAT_TAG_H.stand) * (p.sc || 1) : (p.seat ? .5 + 1.3 * p.sc : 2.05 * p.sc); tv3.set(p.x, p.y + th, p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
-  const show = !!p.tag.textContent && dist < 45 && p.fid === ff && !(p.g && !p.g.visible) && !p.away && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? 'block' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * box.clientWidth) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * box.clientHeight) + 'px'; }
+function tags() { if (LYSYNC) LYSYNC(); const tw = box.clientWidth, th = box.clientHeight, RP = window.P7_roofPark, ff = RP && controls.target.y >= RP.y - .6 ? 'PK' : focusFid(); RES.forEach(p => { const thh = p.cat ? (p.seat ? CAT_TAG_H.sit : CAT_TAG_H.stand) * (p.sc || 1) : (p.seat ? .5 + 1.3 * p.sc : 2.05 * p.sc); tv3.set(p.x, p.y + thh, p.z); const dist = camera.position.distanceTo(tv3); tv3.project(camera);
+  const show = !!p.tag.textContent && dist < 45 && p.fid === ff && !(p.g && !p.g.visible) && !p.away && (SHOT !== 'close' || true) && tv3.z < 1; p.tag.style.display = show ? 'block' : 'none'; if (show) { p.tag.style.left = ((tv3.x + 1) / 2 * tw) + 'px'; p.tag.style.top = ((1 - tv3.y) / 2 * th) + 'px'; }
   p.tag.style.opacity = p.dim > .5 ? .55 : 1;
   if (p.sayT && !p.sayEl) { p.sayEl = document.createElement('div'); p.sayEl.className = 'say'; box.appendChild(p.sayEl); }
   if (p.sayEl) { const on = show && p.sayT && (SHOT || Math.floor(performance.now() / 3500) % (p.sayN || 1) === (p.sayOrd || 0)); p.sayEl.style.display = on ? 'block' : 'none';
@@ -792,12 +797,14 @@ function loop() { requestAnimationFrame(loop); const t = clock.getElapsedTime(),
     u.body.position.y = (SHOT ? 0 : 1) * Math.sin(t * 2 * Math.PI / 2.4 + b.ph) * .03;
     u.arms.forEach(([m, s, r0]) => { m.rotation.x = r0 + (b.kind === 'barista' && s === 'R' ? 0 : Math.sin(t * 1.8 + b.ph + (s === 'L' ? 0 : 1.5)) * .087); }); }); }
 }
-import('./cube_sprite.js').then(m => m.initCubeSprites({ THREE, scene, floorY, T, deskPos, SHOT, Q, camera, controls, camPos, target, box }));
-import('./roof_park.js').then(m => m.initRoofPark({ THREE, scene, SHOT, Q, camera, controls, camPos, target }));
-import('./lightstrip.js').then(m => m.initLightStrip({ THREE, scene, floorY, SHOT, Q, camera, controls, camPos, target })).then(() => import('./contract_board.js').then(m => m.initContractBoard({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target }))).then(() => import('./quarterly_floor.js').then(m => m.initQuarterlyFloor({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target })));
-import('./floors67.js').then(m => m.initFloors67({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target })); // 預覽：6F 網紅間、7F 戰情室
-import('./ceo8f.js').then(m => m.initCeo8F({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target })); // 預覽 ceo-office：8F 總經理室（公開＝霧面玻璃，團隊觀看＝內裝）
-import('./lite_building.js').then(m => m.initLiteBuilding({ THREE, scene, SHOT, Q, camera, controls, camPos, target })); // 紅九九 Lite：1F 店面、2F 電商、3F 辦公室
+Promise.allSettled([
+  import('./cube_sprite.js').then(m => m.initCubeSprites({ THREE, scene, floorY, T, deskPos, SHOT, Q, camera, controls, camPos, target, box })),
+  import('./roof_park.js').then(m => m.initRoofPark({ THREE, scene, SHOT, Q, camera, controls, camPos, target, mergeStatic })),
+  import('./lightstrip.js').then(m => m.initLightStrip({ THREE, scene, floorY, SHOT, Q, camera, controls, camPos, target })).then(() => import('./contract_board.js').then(m => m.initContractBoard({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target }))).then(() => import('./quarterly_floor.js').then(m => m.initQuarterlyFloor({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target, mergeStatic }))),
+  import('./floors67.js').then(m => m.initFloors67({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target, mergeStatic })), // 預覽：6F 網紅間、7F 戰情室
+  import('./ceo8f.js').then(m => m.initCeo8F({ THREE, scene, floorY, T, SHOT, Q, camera, controls, camPos, target })), // 預覽 ceo-office：8F 總經理室（公開＝霧面玻璃，團隊觀看＝內裝）
+  import('./lite_building.js').then(m => m.initLiteBuilding({ THREE, scene, SHOT, Q, camera, controls, camPos, target, mergeStatic })) // 紅九九 Lite：1F 店面、2F 電商、3F 辦公室
+]).then(() => { renderer.compile(scene, camera); });
 function stats() { let tris = 0, meshes = 0; scene.updateMatrixWorld(true); scene.traverse(x => { if (!x.isMesh || !x.visible || (x.material && x.material.visible === false)) return; meshes++; const g = x.geometry, n = (g.index ? g.index.count : g.attributes.position.count) / 3; tris += n * (x.isInstancedMesh ? x.count : 1); }); return { tris: Math.round(tris), meshes }; }
 window.Tower = { stats, scene };
 if (SHOT === 'close') { const y = floorY['3F']; controls.minDistance = 1; tweenT = 1; target.set(-7.5, y + .9, -2.6); camPos.set(-7.5, y + 3.4, 9.5); camera.position.copy(camPos); controls.target.copy(target); }

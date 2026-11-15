@@ -7,7 +7,7 @@
 export function initLiteBuilding(ctx) {
   const A = window.P7_annex;
   if (!A || !A.box || !A.floors) return;
-  const { THREE, scene, SHOT, camera, controls, camPos, target } = ctx;
+  const { THREE, scene, SHOT, camera, controls, camPos, target, mergeStatic } = ctx;
   const { x0, x1, z0, z1, cx, cz } = A.box, floors = A.floors;
   const bw = x1 - x0, bd = z1 - z0, H1 = floors[0].h, roofTop = floors[2].y + floors[2].h;
   const grp = new THREE.Group(); grp.name = 'LITE_HONG99'; scene.add(grp); A.grp = grp;
@@ -66,7 +66,7 @@ export function initLiteBuilding(ctx) {
       ? new THREE.MeshStandardMaterial({ map: tex, emissive: 0xFFF4E6, emissiveMap: tex, emissiveIntensity: .4, roughness: .55, color: 0xFFFFFF })
       : new THREE.MeshBasicMaterial({ map: tex, transparent: !opt.bg, depthWrite: false, color: 0xE4E4E4 });
     const o = new THREE.Mesh(new THREE.PlaneGeometry(opt.w, opt.h), mat);
-    o.raycast = () => {}; o.castShadow = false; grp.add(o); return o;
+    o.raycast = () => {}; o.castShadow = false; o.userData.dyn = 1; grp.add(o); return o;
   }
   // 沿 X 或沿 Z 的牆，開窗處放玻璃與淺木窗框。face：+1 代表外側在固定軸的正方向。
   function facade(axis, fixed, a0, a1, y0, y1, thick, openings, face) {
@@ -128,7 +128,7 @@ export function initLiteBuilding(ctx) {
     cyl(.022, .022, .025, x - .045, gy + .95, z - .02, M.wood3, 8);
     [0.18, 0.4, 0.64].forEach((h, i) => {
       const s = new THREE.Mesh(new THREE.SphereGeometry(.12 - i * .025, 8, 6), STEAM);
-      s.position.set(x + (i - 1) * .03, gy + 1.02 + h, z); s.castShadow = false; s.raycast = () => {}; grp.add(s); steams.push(s);
+      s.position.set(x + (i - 1) * .03, gy + 1.02 + h, z); s.castShadow = false; s.raycast = () => {}; s.userData.dyn = 1; grp.add(s); steams.push(s);
     });
   }
   function table(x, z, gy) {
@@ -355,4 +355,5 @@ export function initLiteBuilding(ctx) {
   aim('lite2', [cx + 2.6, g2y + 1.15, cz + .6], [cx - 1.6, g2y + 1.7, 8.0], 50);
   aim('lite3', [cx - 1.8, g3y + 1.15, cz + .2], [cx + 2.8, g3y + 1.65, 7.6], 48);
   aim('literoof', [cx, roofTop + 1.2, cz + .4], [cx + 1.5, roofTop + 11, z1 + 14], 52);
+  if (mergeStatic) mergeStatic(grp, false, true);
 }

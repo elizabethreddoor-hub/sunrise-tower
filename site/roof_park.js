@@ -10,7 +10,7 @@
 // 只有燈具會發光（燈柱燈頭、涼亭吊燈）；其餘一律不自發光的 Lambert 材質。不加點光源，避免搶各層呼吸燈條的焦點。
 // 屋頂上沒有任何文字、LOGO、招牌或數字。隔壁紅九九Lite 不動。v0.5（預覽）：作息表「屋頂散步」——角色從右側電梯亭上來，在 Mira 小廣場附近散步或坐長椅（只是演出）。
 export function initRoofPark(ctx) {
-  const { THREE, scene, SHOT, Q, camera, controls, camPos, target } = ctx;
+  const { THREE, scene, SHOT, Q, camera, controls, camPos, target, mergeStatic } = ctx;
   const STONE = 0xA39A8E, WOOD = 0xD9B98C, WOOD2 = 0xC4A274, JADE = 0x4FA37A, JADE2 = 0x3E8A64, GOLD = 0xC9A24E, STONE2 = 0x8E8679;
   const M = c => new THREE.MeshLambertMaterial({ color: c });
   const MAT = { stone: M(STONE), wood: M(WOOD), wood2: M(WOOD2), jade: M(JADE), jade2: M(JADE2), gold: M(GOLD), stone2: M(STONE2) };
@@ -141,6 +141,7 @@ export function initRoofPark(ctx) {
       target.set(MIRA_STAGE.x + 1.5, y0 + .7, MIRA_STAGE.z - 1.2); camPos.set(MIRA_STAGE.x + 9, y0 + 6.5, MIRA_STAGE.z + 9.5); camera.position.copy(camPos); controls.target.copy(target); }
     if (SHOT === 'roofpark' && camera && !cam) { cam = true; controls.minDistance = 1; controls.minAzimuthAngle = -3; controls.maxAzimuthAngle = 3; controls.maxDistance = 200; controls.minPolarAngle = .2;
       target.set(-1, y0 + .6, 0); camPos.set(13, y0 + 14, 27); camera.position.copy(camPos); controls.target.copy(target); }
+    if (mergeStatic) mergeStatic(g, false, true);
   }
   window.P7_roofBuild = build; build();
 }
