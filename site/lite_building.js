@@ -146,15 +146,18 @@ export function initLiteBuilding(ctx) {
   }
 
   // ---------- 樓板與外殼 ----------
+  // 木地板底面貼在米白樓板上，邊緣會閃。不抬高木皮：吧檯面跟著抬會多出一條黑線。只把木皮的深度往前偏，位置不變。
+  const floorMat = M.wood.clone(); floorMat.polygonOffset = true; floorMat.polygonOffsetFactor = -1; floorMat.polygonOffsetUnits = -1;
   floors.forEach(f => {
     box(bw, .18, bd, cx, f.y + .09, cz, M.cream, true);
-    box(bw - .55, .04, bd - .55, cx, f.y + .2, cz, M.wood, true);
+    box(bw - .55, .04, bd - .55, cx, f.y + .2, cz, floorMat, true);
     for (let z = z0 + 1.3; z < z1 - .7; z += 1.2) box(bw - .8, .008, .028, cx, f.y + .224, z, M.wood2, true);
     box(bw - .7, .03, bd - .7, cx, f.y + f.h - .08, cz, CEIL, true);
   });
-  const PS = .44;
+  const PS = .44, COL_OUT = .015; // 角柱外皮原來跟牆、樓板外皮同一個面，墨黑跟米白會在柱邊互閃。柱子外推 1.5 cm。
   [[x0, z0], [x0, z1], [x1, z0], [x1, z1]].forEach(([x, z]) => {
-    box(PS, roofTop - .18, PS, x + (x < cx ? PS / 2 : -PS / 2), (roofTop + .18) / 2, z + (z < cz ? PS / 2 : -PS / 2), M.ink);
+    const ox = x < cx ? -COL_OUT : COL_OUT, oz = z < cz ? -COL_OUT : COL_OUT;
+    box(PS, roofTop - .18, PS, x + (x < cx ? PS / 2 : -PS / 2) + ox, (roofTop + .18) / 2, z + (z < cz ? PS / 2 : -PS / 2) + oz, M.ink);
   });
   const glassTop = A.signY - .52;
   const doorW = 1.9, dL = cx - doorW / 2, dR = cx + doorW / 2;
