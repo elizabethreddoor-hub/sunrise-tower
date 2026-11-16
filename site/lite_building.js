@@ -146,14 +146,12 @@ export function initLiteBuilding(ctx) {
   }
 
   // ---------- 樓板與外殼 ----------
-  // 木地板底面原來貼在米白樓板上（同一個 y），淺木接縫也貼在木地板上。
-  // 貼在同一個面時，地板四周會閃出深色碎塊。兩者都要留：樓板是結構，木皮跟接縫是表面，把表面往上抬 1.5 cm。
-  const FLOOR_LIFT = .015;
-  const seam = M.wood2.clone(); seam.polygonOffset = true; seam.polygonOffsetFactor = -1; seam.polygonOffsetUnits = -1;
+  // 木地板底面貼在米白樓板上，邊緣會閃。不抬高木皮：吧檯面跟著抬會多出一條黑線。只把木皮的深度往前偏，位置不變。
+  const floorMat = M.wood.clone(); floorMat.polygonOffset = true; floorMat.polygonOffsetFactor = -1; floorMat.polygonOffsetUnits = -1;
   floors.forEach(f => {
     box(bw, .18, bd, cx, f.y + .09, cz, M.cream, true);
-    box(bw - .55, .04, bd - .55, cx, f.y + .2 + FLOOR_LIFT, cz, M.wood, true);
-    for (let z = z0 + 1.3; z < z1 - .7; z += 1.2) box(bw - .8, .008, .028, cx, f.y + .224 + FLOOR_LIFT, z, seam, true);
+    box(bw - .55, .04, bd - .55, cx, f.y + .2, cz, floorMat, true);
+    for (let z = z0 + 1.3; z < z1 - .7; z += 1.2) box(bw - .8, .008, .028, cx, f.y + .224, z, M.wood2, true);
     box(bw - .7, .03, bd - .7, cx, f.y + f.h - .08, cz, CEIL, true);
   });
   const PS = .44, COL_OUT = .015; // 角柱外皮原來跟牆、樓板外皮同一個面，墨黑跟米白會在柱邊互閃。柱子外推 1.5 cm。
@@ -219,7 +217,7 @@ export function initLiteBuilding(ctx) {
   });
 
   // ---------- 1F 店面：一個人安靜用餐 ----------
-  const g1 = .22 + FLOOR_LIFT;
+  const g1 = .22;
   runZ(z0 + 1.5, z1 - 2.3, g1 + 1.6, x0 + .24); runZ(z0 + 1.5, z1 - 2.3, g1 + 2.55, x0 + .24);
   runZ(z0 + 1.5, z1 - 2.3, g1 + 1.6, x1 - .24); runZ(z0 + 1.5, z1 - 2.3, g1 + 2.55, x1 - .24);
   runX(cx - 6.2, cx + 6.2, g1 + 3.15, z0 + .22);
@@ -259,7 +257,7 @@ export function initLiteBuilding(ctx) {
   const pl1b = new THREE.PointLight(0xFFF6EA, 3.2, 12, 1.8); pl1b.position.set(cx + 3, g1 + 2.8, z1 - 2.2); grp.add(pl1b);
 
   // ---------- 2F 電商：封箱桌、紙箱層架、小直播桌 ----------
-  const g2 = floors[1].y + .22 + FLOOR_LIFT;
+  const g2 = floors[1].y + .22;
   function shelf(x, z, len, along) {
     const depth = .48, levels = 4;
     for (let i = 0; i < levels; i++) {
@@ -318,7 +316,7 @@ export function initLiteBuilding(ctx) {
   const p2b = new THREE.PointLight(0xFFF1DC, 2.4, 10, 1.8); p2b.position.set(lx, g2 + 2.4, lz + .4); grp.add(p2b);
 
   // ---------- 3F 辦公室：桌子與電腦 ----------
-  const g3 = floors[2].y + .22 + FLOOR_LIFT;
+  const g3 = floors[2].y + .22;
   function desk(x, z, ry) {
     const g = new THREE.Group(); g.position.set(x, g3, z); g.rotation.y = ry; grp.add(g);
     const add = (w, h, d, lx, ly, lz, mat) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); o.position.set(lx, ly, lz); o.castShadow = true; o.receiveShadow = true; o.raycast = () => {}; g.add(o); return o; };
